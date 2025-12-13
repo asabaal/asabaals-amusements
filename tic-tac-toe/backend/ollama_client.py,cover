@@ -1,0 +1,63 @@
+> import subprocess
+> import json
+> import re
+> from typing import Optional
+  
+> class OllamaClient:
+>     def __init__(self, model: str = "llama3.2:1b"):
+>         self.model = model
+      
+>     def generate(self, prompt: str, max_tokens: int = 10) -> Optional[str]:
+>         try:
+              # Use echo to pipe prompt to ollama run for faster response
+>             echo_cmd = ["echo", prompt]
+>             ollama_cmd = ["ollama", "run", self.model]
+              
+>             echo_proc = subprocess.Popen(echo_cmd, stdout=subprocess.PIPE, text=True)
+>             result = subprocess.run(
+>                 ollama_cmd,
+>                 stdin=echo_proc.stdout,
+>                 text=True,
+>                 capture_output=True,
+>                 timeout=5
+>             )
+>             echo_proc.wait()
+              
+>             if result.returncode != 0:
+>                 print(f"Ollama error: {result.stderr}")
+>                 return None
+              
+              # Get the response (last non-empty line)
+>             lines = [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
+>             if lines:
+>                 return lines[-1]
+>             return result.stdout.strip()
+              
+>         except subprocess.TimeoutExpired:
+>             print("Ollama request timed out")
+>             return None
+>         except Exception as e:
+>             print(f"Error calling Ollama: {e}")
+>             return None
+      
+>     def get_move(self, board: list, player: str) -> Optional[int]:
+          # Find empty positions
+>         empty_positions = [i for i, cell in enumerate(board) if cell == " "]
+          
+>         prompt = f"""Tic-Tac-Toe. You are {player}.
+> Board: {board}
+> Empty positions: {empty_positions}
+> Choose one empty position (0-8):"""
+          
+>         response = self.generate(prompt)
+>         if response is None:
+>             return None
+          
+          # Extract first integer from response
+>         match = re.search(r'\d', response)
+>         if match:
+>             move = int(match.group())
+>             if 0 <= move <= 8:
+>                 return move
+          
+>         return None

@@ -1,0 +1,36 @@
+> from abc import ABC, abstractmethod
+> from typing import Optional
+> from ollama_client import OllamaClient
+  
+> class Agent(ABC):
+>     @abstractmethod
+>     def get_move(self, board: list, player: str) -> Optional[int]:
+>         pass
+  
+> class HumanAgent(Agent):
+>     def __init__(self):
+>         pass
+      
+>     def get_move(self, board: list, player: str) -> Optional[int]:
+          # Human moves are provided via API, not this method
+>         return None
+  
+> class AIAgent(Agent):
+>     def __init__(self, model: str = "llama3.2:1b"):
+>         self.client = OllamaClient(model)
+>         self.model = model
+      
+>     def get_move(self, board: list, player: str) -> Optional[int]:
+>         return self.client.get_move(board, player)
+  
+> class AgentFactory:
+>     @staticmethod
+>     def create_agent(agent_type: str, model: Optional[str] = None) -> Agent:
+>         if agent_type == "human":
+>             return HumanAgent()
+>         elif agent_type == "ai":
+>             if model is None:
+>                 model = "llama3.2:1b"
+>             return AIAgent(model)
+>         else:
+>             raise ValueError(f"Unknown agent type: {agent_type}")
