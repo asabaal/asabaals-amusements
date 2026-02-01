@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>As I Evolve - Narrative Exploration Prototype</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: #000; color: #e8e8e8; overflow: hidden; width: 100vw; height: 100vh }
+    
+    #scene-container { position: relative; width: 100%; height: 100%; }
+    
+    #scene-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #1a1a1a;
+      z-index: 0
+    }
+    
+    #scene-image-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #0d0d0d;
+      z-index: 0
+    }
+    
+    #scene-image-placeholder span { font-size: 2rem; opacity: 0.5 }
+    
+    .overlay {
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      border: 1px solid rgba(255, 255, 255, 0.1)
+    }
+    
+    #title-block {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 15px 20px;
+      border-radius: 8px;
+      max-width: 400px;
+      z-index: 10
+    }
+    
+    #title-block h1 { font-size: 1.2rem; font-weight: 600; margin-bottom: 5px }
+    #title-block h2 { font-size: 0.8rem; font-weight: 400; opacity: 0.7; margin-bottom: 10px }
+    #title-block #scene-name { font-size: 1rem; font-weight: 500; opacity: 0.9 }
+    
+    #message-block {
+      position: absolute;
+      bottom: 120px;
+      left: 20px;
+      right: 20px;
+      max-width: 600px;
+      padding: 20px;
+      border-radius: 8px;
+      z-index: 10
+    }
+    
+    #message-block p { font-size: 1.1rem; line-height: 1.6; opacity: 0.95 }
+    
+    #navigation-block {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: calc(100vh - 160px);
+      overflow-y: auto
+    }
+    
+    #navigation-block h3 { font-size: 0.75rem; opacity: 0.6; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px }
+    
+    .nav-button {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e8e8e8;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      text-align: left;
+      min-width: 200px
+    }
+    
+    .nav-button:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.3)
+    }
+    
+    #controls {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 10
+    }
+    
+    .control-button {
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e8e8e8;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease
+    }
+    
+    .control-button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.4)
+    }
+    
+    #navigation-block::-webkit-scrollbar { width: 6px }
+    #navigation-block::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 3px }
+    #navigation-block::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px }
+    
+    @media (max-width: 768px) {
+      #title-block { top: 10px; left: 10px; padding: 12px 15px; max-width: 300px }
+      #message-block { bottom: 140px; left: 10px; right: 10px; padding: 15px; font-size: 0.95rem }
+      #navigation-block { bottom: 10px; right: 10px; left: 10px; max-height: 120px }
+      #controls { top: 10px; right: 10px }
+      #title-block h1 { font-size: 1rem }
+      #title-block h2 { font-size: 0.7rem }
+      #scene-image-placeholder span { font-size: 1.5rem }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene-container">
+    <img id="scene-image" alt="Scene image" />
+    <div id="scene-image-placeholder"><span id="placeholder-text"></span></div>
+    
+    <div id="title-block" class="overlay">
+      <h1>As I Evolve</h1>
+      <h2>Narrative Exploration Prototype</h2>
+      <div id="scene-name"></div>
+    </div>
+    
+    <div id="message-block" class="overlay">
+      <p id="scene-message"></p>
+    </div>
+    
+    <div id="navigation-block" class="overlay">
+      <h3>Destinations</h3>
+      <div id="nav-buttons"></div>
+    </div>
+    
+    <div id="controls">
+      <button id="back-button" class="control-button">Back</button>
+      <button id="home-button" class="control-button">Home</button>
+    </div>
+  </div>
+
+  <script>
+    const sceneManifest = {
+      church_exterior_arrival: {
+        displayName: "Church Exterior Arrival",
+        message: "A place that looks welcoming can still be a question.",
+        destinations: ["church_sanctuary", "church_lobby_fellowship", "inbetween_walking_path", "home_living_space", "reality_steward_hub"]
+      },
+      church_sanctuary: {
+        displayName: "Church Sanctuary",
+        message: "The room is prepared. You wonder who it is prepared for.",
+        destinations: ["church_lobby_fellowship", "church_hallway_threshold", "church_exterior_arrival", "reality_steward_hub"]
+      },
+      church_lobby_fellowship: {
+        displayName: "Church Lobby Fellowship",
+        message: "Politeness is real. So is distance.",
+        destinations: ["church_sanctuary", "church_hallway_threshold", "church_exterior_arrival", "home_living_space", "reality_steward_hub"]
+      },
+      church_hallway_threshold: {
+        displayName: "Church Hallway Threshold",
+        message: "Meaning lands in the spaces between rooms.",
+        destinations: ["church_sanctuary", "church_lobby_fellowship", "church_office_meeting", "church_exterior_arrival", "reality_steward_hub"]
+      },
+      church_office_meeting: {
+        displayName: "Church Office Meeting",
+        message: "Words become procedure without anyone raising their voice.",
+        destinations: ["church_hallway_threshold", "home_desk_journal", "home_living_space", "reality_steward_hub"]
+      },
+      home_living_space: {
+        displayName: "Home Living Space",
+        message: "At home, your body tells the truth first.",
+        destinations: ["home_desk_journal", "home_bedroom_quiet", "inbetween_walking_path", "inbetween_car_night", "church_exterior_arrival", "reality_steward_hub"]
+      },
+      home_desk_journal: {
+        displayName: "Home Desk Journal",
+        message: "You reread the same lines and hear new meanings.",
+        destinations: ["home_living_space", "home_bedroom_quiet", "reality_steward_hub"]
+      },
+      home_bedroom_quiet: {
+        displayName: "Home Bedroom Quiet",
+        message: "Quiet can hold faith without performance.",
+        destinations: ["home_living_space", "home_desk_journal", "reality_steward_hub"]
+      },
+      inbetween_car_night: {
+        displayName: "Inbetween Car Night",
+        message: "You can breathe when no one is watching.",
+        destinations: ["inbetween_walking_path", "home_living_space", "elsewhere_open_horizon", "reality_steward_hub"]
+      },
+      inbetween_walking_path: {
+        displayName: "Inbetween Walking Path",
+        message: "Movement helps thoughts settle into shape.",
+        destinations: ["inbetween_car_night", "church_exterior_arrival", "home_living_space", "elsewhere_open_horizon", "reality_steward_hub"]
+      },
+      prehistory_memory_sanctuary_abstract: {
+        displayName: "Prehistory Memory Sanctuary Abstract",
+        message: "A memory is not a timeline. It is a pressure point.",
+        destinations: ["prehistory_study_room", "reality_steward_hub", "home_living_space"]
+      },
+      prehistory_study_room: {
+        displayName: "Prehistory Study Room",
+        message: "Language was learned here. It shaped what felt possible.",
+        destinations: ["prehistory_memory_sanctuary_abstract", "home_desk_journal", "reality_steward_hub"]
+      },
+      reality_steward_hub: {
+        displayName: "Reality Steward Hub",
+        message: "You are a Reality Steward exploring preserved moments.",
+        destinations: ["church_exterior_arrival", "home_living_space", "prehistory_memory_sanctuary_abstract", "prehistory_study_room", "inbetween_car_night", "elsewhere_open_horizon"]
+      },
+      elsewhere_open_horizon: {
+        displayName: "Elsewhere Open Horizon",
+        message: "Clarity is not an ending. It is room to live.",
+        destinations: ["home_living_space", "reality_steward_hub", "inbetween_walking_path"]
+      }
+    };
+
+    const sceneImage = document.getElementById('scene-image');
+    const sceneImagePlaceholder = document.getElementById('scene-image-placeholder');
+    const placeholderText = document.getElementById('placeholder-text');
+    const sceneName = document.getElementById('scene-name');
+    const sceneMessage = document.getElementById('scene-message');
+    const navButtons = document.getElementById('nav-buttons');
+    const homeButton = document.getElementById('home-button');
+    const backButton = document.getElementById('back-button');
+
+    function loadScene(sceneId) {
+      if (!sceneManifest[sceneId]) {
+        sceneId = 'reality_steward_hub';
+      }
+
+      const scene = sceneManifest[sceneId];
+      
+      const imagePaths = [
+        `assets/scenes/${sceneId}.webp`,
+        `assets/scenes/${sceneId}.jpg`,
+        `assets/scenes/${sceneId}.png`
+      ];
+
+      let imageIndex = 0;
+      let imageFound = false;
+
+      sceneImage.style.display = 'none';
+      sceneImagePlaceholder.style.display = 'none';
+
+      function tryLoadImage() {
+        if (imageIndex >= imagePaths.length) {
+          if (!imageFound) {
+            sceneImagePlaceholder.style.display = 'flex';
+            placeholderText.textContent = scene.displayName;
+          }
+          return;
+        }
+
+        const path = imagePaths[imageIndex];
+        const testImg = new Image();
+        
+        testImg.onload = () => {
+          if (!imageFound) {
+            imageFound = true;
+            sceneImage.src = path;
+            sceneImage.style.display = 'block';
+            sceneImagePlaceholder.style.display = 'none';
+          }
+        };
+        
+        testImg.onerror = () => {
+          imageIndex++;
+          tryLoadImage();
+        };
+        
+        testImg.src = path;
+      }
+
+      tryLoadImage();
+
+      sceneName.textContent = scene.displayName;
+      sceneMessage.textContent = scene.message;
+
+      navButtons.innerHTML = '';
+      scene.destinations.forEach(destId => {
+        const destScene = sceneManifest[destId];
+        if (destScene) {
+          const button = document.createElement('button');
+          button.className = 'nav-button';
+          button.textContent = destScene.displayName;
+          button.onclick = () => {
+            history.pushState(null, null, `#${destId}`);
+            loadScene(destId);
+          };
+          navButtons.appendChild(button);
+        }
+      });
+
+      window.location.hash = sceneId;
+    }
+
+    homeButton.onclick = () => {
+      history.pushState(null, null, '#reality_steward_hub');
+      loadScene('reality_steward_hub');
+    };
+
+    backButton.onclick = () => {
+      window.history.back();
+    };
+
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && sceneManifest[hash]) {
+        loadScene(hash);
+      }
+    });
+
+    window.addEventListener('popstate', () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && sceneManifest[hash]) {
+        loadScene(hash);
+      }
+    });
+
+    const initialScene = window.location.hash.slice(1) || 'reality_steward_hub';
+    loadScene(initialScene);
+  </script>
+</body>
+</html>

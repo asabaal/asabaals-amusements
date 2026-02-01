@@ -1,0 +1,117 @@
+V0 SCENE IMAGE PROMPTS
+
+As I Evolve — Narrative Game
+
+You can paste these directly into MidJourney.
+
+1. Church Exterior (Arrival)
+
+Purpose: hope, neutrality, possibility
+
+Prompt:
+
+modern church exterior at dusk, soft overcast sky, warm interior light glowing through large windows, quiet suburban setting, no people visible, cinematic lighting, contemplative mood, realism, shallow depth of field, symbolic rather than dramatic, high detail --ar 16:9
+
+2. Church Sanctuary
+
+Purpose: public worship, polished language, first impression
+
+Prompt:
+
+modern church sanctuary interior, minimalist stage, empty seats, soft ambient lighting, clean architecture, subtle cross symbolism, calm and welcoming atmosphere, no congregation present, cinematic wide shot, emotionally neutral, realism --ar 16:9
+
+3. Fellowship Hall / Lobby
+
+Purpose: politeness, social sorting, misalignment
+
+Prompt:
+
+church fellowship hall interior, neutral modern design, coffee station, folding tables, empty chairs, bright but emotionally flat lighting, sense of social space without people, quiet tension, cinematic realism --ar 16:9
+
+4. Church Hallway / Threshold
+
+Purpose: realization space, in-between moments
+
+Prompt:
+
+empty church hallway, soft fluorescent lighting, long corridor, doors slightly ajar, muted colors, contemplative silence, transitional space, subtle unease, cinematic realism, wide angle --ar 16:9
+
+5. Church Office / Meeting Room
+
+Purpose: authority, policy, structure
+
+Prompt:
+
+church office meeting room, modern professional furniture, closed laptop, notepad on table, neutral walls, institutional atmosphere, calm but emotionally distant, no people present, cinematic realism --ar 16:9
+
+6. Home Living Space
+
+Purpose: reflection, processing, safety
+
+Prompt:
+
+quiet modern living room at night, soft lamp light, couch and coffee table, minimal decor, calm intimate atmosphere, no people present, cinematic lighting, warm tones, realism --ar 16:9
+
+7. Desk / Journal Space
+
+Purpose: meaning making, emails, re-reading
+
+Prompt:
+
+desk by window at night, laptop slightly open, notebook and pen, soft ambient light, sense of contemplation and weight, realistic interior photography style, cinematic framing --ar 16:9
+
+8. Bedroom / Quiet Prayer Space
+
+Purpose: vulnerability, exhaustion, private faith
+
+Prompt:
+
+quiet bedroom interior, dim lighting, simple bed, window with night sky, peaceful but heavy atmosphere, solitude, realism, cinematic wide shot --ar 16:9
+
+9. Car Interior (In-Between)
+
+Purpose: processing, unguarded thought
+
+Prompt:
+
+car interior at night, dashboard lights glowing softly, rain on windshield, empty road ahead, introspective mood, cinematic realism, shallow depth of field --ar 16:9
+
+10. Walking Path / Transitional Space
+
+Purpose: realization, movement without destination
+
+Prompt:
+
+quiet walking path at twilight, suburban or park setting, soft fading light, no people, contemplative atmosphere, realism, cinematic wide shot --ar 16:9
+
+11. Prehistory — Formation Space (Abstract)
+
+Purpose: inherited faith, early shaping
+
+Prompt:
+
+abstract religious interior memory, blurred sanctuary shapes, soft light through stained glass, impressionistic realism, dreamlike but grounded, symbolic, no figures, cinematic composition --ar 16:9
+
+12. Prehistory — Study / Formation Space
+
+Purpose: doctrine, learning, internalization
+
+Prompt:
+
+quiet study room with books, religious texts on desk, warm but serious lighting, sense of discipline and focus, empty room, cinematic realism --ar 16:9
+
+13. Reality Steward Hub (Meta-Space)
+
+Purpose: nonlinear time, exploration frame
+
+Prompt:
+
+abstract archive space, floating panels or softly glowing memory fragments, calm neutral color palette, futuristic but gentle, contemplative control room, symbolic realism, widescreen cinematic --ar 16:9
+
+14. Elsewhere / Post-Exit Space
+
+Purpose: clarity, openness, not replacement
+
+Prompt:
+
+open quiet outdoor space, early morning light, wide horizon, subtle warmth, peaceful but not euphoric, sense of grounding and openness, cinematic realism --ar 16:9
