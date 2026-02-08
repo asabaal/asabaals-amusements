@@ -1,0 +1,451 @@
+TECHNICAL SPECIFICATION
+
+Driving Minigame with Obstacles and Reality Tokens
+Standalone Webpage
+Vanilla HTML CSS JavaScript Only
+
+1. Project Overview
+Objective
+
+Build a standalone browser based driving minigame where:
+
+Player avoids obstacles
+
+Player collects reality tokens
+
+Tokens act as a persistent currency variable for future systems
+
+Game runs entirely in one webpage
+
+No external libraries or frameworks
+
+2. Technical Constraints
+
+Must run in modern desktop browsers
+
+No frameworks
+
+No canvas required. DOM elements only
+
+No backend
+
+No build tools
+
+No npm dependencies
+
+Pure HTML CSS JavaScript
+
+3. File Structure
+
+Agent may implement either:
+
+Option A Single File
+index.html
+
+Option B Split Files
+index.html
+style.css
+game.js
+
+
+No other files required.
+
+4. Game Container Specification
+Dimensions
+
+Width 400px
+
+Height 600px
+
+Centered on page
+
+Behavior
+
+Overflow hidden
+
+Relative positioning context for all entities
+
+5. HTML Element Schema
+
+Minimum required DOM structure:
+
+<div id="game">
+
+  <div id="road"></div>
+
+  <div id="player"></div>
+
+  <div id="ui">
+    <div id="score">Score: 0</div>
+    <div id="tokens">Reality Tokens: 0</div>
+  </div>
+
+  <div id="startScreen">Press Start</div>
+  <div id="gameOverScreen">Game Over</div>
+
+</div>
+
+6. Entity Definitions
+6.1 Player Entity
+Properties
+
+Width 50px
+
+Height 80px
+
+Initial X center aligned
+
+Fixed Y near bottom
+
+Movement
+
+Horizontal only
+
+Controlled by keyboard
+
+No vertical movement
+
+Controls
+
+ArrowLeft or KeyA → move left
+
+ArrowRight or KeyD → move right
+
+Constraints
+
+Cannot exit road bounds
+
+6.2 Obstacle Entities
+Properties
+
+Width 50px
+
+Height 80px
+
+Spawn at random X within road
+
+Spawn above visible area
+
+Behavior
+
+Move downward each frame
+
+Constant speed
+
+Destroyed when off screen
+
+Collision
+
+Ends game on contact with player
+
+6.3 Reality Token Entities
+Properties
+
+Width 30px
+
+Height 30px
+
+Spawn randomly like obstacles
+
+Behavior
+
+Move downward
+
+Removed on collection
+
+Increase token counter
+
+7. Coordinate System
+
+All entities use:
+
+position absolute
+top in pixels
+left in pixels
+
+
+Origin reference: top left of game container.
+
+8. Game State Model
+
+Agent must implement state controller:
+
+gameState = "start" | "playing" | "gameover"
+
+State Behaviors
+Start
+
+No movement
+
+Start screen visible
+
+Playing
+
+Spawning active
+
+Movement active
+
+Score increments
+
+Game Over
+
+Movement stops
+
+Spawning stops
+
+Game over screen visible
+
+9. Game Loop Specification
+
+Must use:
+
+requestAnimationFrame
+
+
+Loop responsibilities:
+
+Move obstacles
+
+Move tokens
+
+Detect collisions
+
+Remove off screen entities
+
+Update score over time
+
+10. Spawn Systems
+Obstacle Spawning
+
+Interval based:
+
+Spawn rate: every 1200 ms
+
+
+Spawn logic:
+
+Random X within bounds
+
+Y starts at -entityHeight
+
+Token Spawning
+
+Interval based:
+
+Spawn rate: every 2000 ms
+
+
+Same spawn logic as obstacles.
+
+11. Movement System
+
+Each frame:
+
+entity.top += speed
+
+Base Speeds
+
+Obstacle speed: 4px per frame
+Token speed: 4px per frame
+
+Speed may scale over time.
+
+12. Collision Detection
+
+Bounding box method required.
+
+Agent must compute:
+
+getBoundingClientRect()
+
+
+Collision rules:
+
+Player + Obstacle → Game Over
+
+Player + Token → Collect token
+
+13. Scoring System
+
+Two counters required.
+
+Score
+
+Represents survival time.
+
+Increment:
+
++1 per frame OR time interval
+
+
+Displayed in UI.
+
+Reality Tokens
+
+Increment:
+
++1 per token collected
+
+
+Stored in variable:
+
+let realityTokens = 0;
+
+
+Must be architected as reusable currency variable.
+
+14. Road Scrolling Illusion
+
+Required for driving effect.
+
+Implementation options:
+
+CSS animation preferred
+
+Scrolling dashed lines background.
+
+OR
+
+JS background offset update
+
+No physics required.
+
+15. Input Handling
+
+Keyboard listeners:
+
+keydown
+keyup
+
+
+Movement must be smooth continuous while key held.
+
+No tap based movement.
+
+16. Boundary Enforcement
+
+Player X must clamp:
+
+min: 0
+max: gameWidth - playerWidth
+
+17. Entity Lifecycle Management
+
+Agent must implement arrays:
+
+obstacles = []
+tokens = []
+
+
+Each frame:
+
+Update positions
+
+Remove off screen entities
+
+Remove collected tokens
+
+18. UI Requirements
+
+Must display:
+
+Score
+
+Reality token count
+
+Optional:
+
+Start prompt
+
+Restart prompt
+
+19. Game Restart Logic
+
+On restart:
+
+Reset score
+
+Reset tokens (or optionally persist)
+
+Clear all entities
+
+Reset speed
+
+Reset player position
+
+20. Persistence Hook (Future Use)
+
+Agent must isolate token currency logic:
+
+function addRealityToken(amount) {
+  realityTokens += amount;
+}
+
+
+This enables export to external systems later.
+
+No storage required yet but structure must support it.
+
+21. Performance Constraints
+
+Must support 60 FPS on desktop
+
+Entity cleanup required
+
+No memory leaks via orphan DOM nodes
+
+22. Visual Requirements (Minimal)
+
+No art assets required.
+
+Placeholder styling allowed:
+
+Player rectangle
+
+Red obstacles
+
+Cyan tokens
+
+Dark road background
+
+23. Completion Criteria
+
+Minigame considered complete when:
+
+Player moves left/right
+
+Obstacles spawn and collide
+
+Tokens spawn and collect
+
+Score increments
+
+Token counter increments
+
+Game over triggers
+
+Restart works
+
+Runs in standalone webpage
+
+24. Explicit Non Scope
+
+Agent must NOT implement:
+
+Mobile controls
+
+Sound
+
+Physics steering
+
+Acceleration systems
+
+Multiple lanes
+
+Traffic AI
+
+Shops
+
+Token spending
+
+Backend saves

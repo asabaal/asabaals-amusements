@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maze Navigation - Reality Tokens</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box }
+    
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #1a0a2e 0%, #0d0d1a 50%, #1a1a3e 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden
+    }
+    
+    #game-container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start
+    }
+    
+    #room-container {
+      width: 600px;
+      height: 600px;
+      position: relative;
+      background: linear-gradient(180deg, #1a1a2e 0%, #252540 100%);
+      border: 3px solid #9d4edd;
+      border-radius: 12px;
+      box-shadow: 0 0 40px rgba(157, 78, 221, 0.4);
+      overflow: hidden
+    }
+    
+    #room-grid {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background-image: 
+        linear-gradient(rgba(157, 78, 221, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(157, 78, 221, 0.1) 1px, transparent 1px);
+      background-size: 60px 60px
+    }
+    
+    .wall {
+      position: absolute;
+      background: linear-gradient(180deg, #9d4edd 0%, #7b2cbf 100%);
+      box-shadow: 0 0 15px rgba(157, 78, 221, 0.6);
+      z-index: 5
+    }
+    
+    .wall.horizontal {
+      height: 20px;
+      width: 100%
+    }
+    
+    .wall.vertical {
+      width: 20px;
+      height: 100%
+    }
+    
+    .door {
+      position: absolute;
+      background: linear-gradient(180deg, #c77dff 0%, #e0aaff 100%);
+      box-shadow: 0 0 20px rgba(199, 125, 255, 0.6);
+      z-index: 6;
+      cursor: pointer
+    }
+    
+    .door.horizontal {
+      height: 40px;
+      width: 80px
+    }
+    
+    .door.vertical {
+      width: 40px;
+      height: 80px
+    }
+    
+    .door::after {
+      content: '→';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      color: #1a0a2e;
+      font-weight: 700
+    }
+    
+    #player {
+      width: 30px;
+      height: 30px;
+      position: absolute;
+      background: radial-gradient(circle, #00b4d8 0%, #0077b6 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0, 180, 216, 0.8), 0 0 40px rgba(0, 180, 216, 0.4);
+      z-index: 10;
+      transition: left 0.05s linear, top 0.05s linear
+    }
+    
+    #player::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8)
+    }
+    
+    .item {
+      width: 40px;
+      height: 40px;
+      position: absolute;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 8;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s ease;
+      user-select: none
+    }
+    
+    .item:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.6)
+    }
+    
+    .item.memory {
+      background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+      border: 2px solid rgba(199, 125, 255, 0.5)
+    }
+    
+    .item.energy {
+      background: linear-gradient(135deg, #00b4d8 0%, #48cae4 100%);
+      border: 2px solid rgba(72, 202, 228, 0.5)
+    }
+    
+    .item.signal {
+      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
+      border: 2px solid rgba(255, 165, 0, 0.5)
+    }
+    
+    .token {
+      width: 30px;
+      height: 30px;
+      position: absolute;
+      background: radial-gradient(circle, #ffd700 0%, #ffb700 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.4);
+      z-index: 7;
+      animation: tokenGlow 1s ease-in-out infinite alternate
+    }
+    
+    @keyframes tokenGlow {
+      from { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.4) }
+      to { box-shadow: 0 0 25px rgba(255, 215, 0, 1), 0 0 50px rgba(255, 215, 0, 0.6) }
+    }
+    
+    .token::after {
+      content: '◆';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #1a0a2e
+    }
+    
+    .delivery-node {
+      width: 50px;
+      height: 50px;
+      position: absolute;
+      background: linear-gradient(135deg, #e63946 0%, #ff6b6b 100%);
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px rgba(230, 57, 70, 0.6);
+      z-index: 7;
+      animation: nodePulse 2s ease-in-out infinite
+    }
+    
+    @keyframes nodePulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(230, 57, 70, 0.6) }
+      50% { box-shadow: 0 0 40px rgba(230, 57, 70, 0.9) }
+    }
+    
+    .delivery-node.completed {
+      background: linear-gradient(135deg, #2ecc71 0%, #58d68d 100%);
+      animation: none;
+      opacity: 0.6
+    }
+    
+    #sidebar {
+      width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px
+    }
+    
+    .sidebar-panel {
+      background: rgba(45, 27, 46, 0.9);
+      border: 2px solid rgba(157, 78, 221, 0.4);
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3)
+    }
+    
+    .sidebar-panel h3 {
+      color: #c77dff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px
+    }
+    
+    #minimap {
+      display: grid;
+      grid-template-columns: repeat(5, 30px);
+      grid-template-rows: repeat(5, 30px);
+      gap: 2px
+    }
+    
+    .minimap-cell {
+      width: 30px;
+      height: 30px;
+      background: #2a2a3e;
+      border-radius: 4px;
+      position: relative;
+      transition: all 0.3s ease
+    }
+    
+    .minimap-cell.visited {
+      background: rgba(157, 78, 221, 0.4)
+    }
+    
+    .minimap-cell.current {
+      background: #c77dff;
+      box-shadow: 0 0 15px rgba(199, 125, 255, 0.8)
+    }
+    
+    .door-indicator {
+      position: absolute;
+      color: #48cae4;
+      font-size: 12px;
+      font-weight: 700;
+      pointer-events: none
+    }
+    
+    .door-indicator.north { top: 2px; left: 50%; transform: translateX(-50%) }
+    .door-indicator.south { bottom: 2px; left: 50%; transform: translateX(-50%) }
+    .door-indicator.west { left: 2px; top: 50%; transform: translateY(-50%) }
+    .door-indicator.east { right: 2px; top: 50%; transform: translateY(-50%) }
+    
+    .minimap-item {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      font-size: 14px;
+      opacity: 0.8;
+      pointer-events: none
+    }
+    
+    .minimap-node {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      font-size: 12px;
+      color: #e63946;
+      font-weight: 700;
+      pointer-events: none
+    }
+    
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #e8e8e8;
+      font-size: 0.85rem;
+      margin-bottom: 8px
+    }
+    
+    .stat-item:last-child {
+      margin-bottom: 0
+    }
+    
+    .stat-value {
+      color: #c77dff;
+      font-weight: 600;
+      font-size: 1rem
+    }
+    
+    #held-item-display {
+      padding: 10px;
+      background: rgba(0, 180, 216, 0.2);
+      border: 1px solid rgba(0, 180, 216, 0.4);
+      border-radius: 6px;
+      color: #48cae4;
+      font-size: 0.85rem;
+      text-align: center;
+      font-weight: 600;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+    
+    #held-item-display.empty {
+      color: #999;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2)
+    }
+    
+    #startScreen, #completionScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(13, 13, 26, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      gap: 20px
+    }
+    
+    #startScreen h1, #completionScreen h1 {
+      color: #c77dff;
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-shadow: 0 0 40px rgba(199, 125, 255, 0.6);
+      margin-bottom: 10px
+    }
+    
+    #startScreen p, #completionScreen p {
+      color: #e8e8e8;
+      font-size: 1rem;
+      opacity: 0.85;
+      text-align: center;
+      max-width: 500px;
+      line-height: 1.6
+    }
+    
+    #startScreen .instructions {
+      background: rgba(157, 78, 221, 0.15);
+      border: 1px solid rgba(157, 78, 221, 0.4);
+      padding: 20px 30px;
+      border-radius: 10px;
+      margin: 10px 0;
+      max-width: 500px
+    }
+    
+    #startScreen .instructions p {
+      max-width: 440px;
+      text-align: left
+    }
+    
+    .token-highlight {
+      color: #ffd700;
+      font-weight: 600
+    }
+    
+    #startScreen button, #completionScreen button {
+      background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+      color: #fff;
+      border: none;
+      padding: 18px 50px;
+      border-radius: 10px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 25px rgba(157, 78, 221, 0.5);
+      margin-top: 10px
+    }
+    
+    #startScreen button:hover, #completionScreen button:hover {
+      background: linear-gradient(135deg, #c77dff 0%, #e0aaff 100%);
+      box-shadow: 0 0 40px rgba(199, 125, 255, 0.7);
+      transform: scale(1.05)
+    }
+    
+    #completionScreen button {
+      background: linear-gradient(135deg, #e63946 0%, #ff6b6b 100%);
+      box-shadow: 0 0 25px rgba(230, 57, 70, 0.5)
+    }
+    
+    #completionScreen button:hover {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8c00 100%);
+      box-shadow: 0 0 40px rgba(255, 107, 107, 0.7)
+    }
+    
+    .token-display {
+      font-size: 3rem;
+      color: #ffd700;
+      font-weight: 700;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+      margin: 15px 0
+    }
+    
+    .hidden { display: none !important }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="room-container">
+      <div id="room-grid"></div>
+      <div id="player"></div>
+    </div>
+    
+    <div id="sidebar">
+      <div class="sidebar-panel">
+        <h3>Map</h3>
+        <div id="minimap"></div>
+      </div>
+      
+      <div class="sidebar-panel">
+        <h3>Inventory</h3>
+        <div id="held-item-display" class="empty">Holding: None</div>
+      </div>
+      
+      <div class="sidebar-panel">
+        <h3>Stats</h3>
+        <div class="stat-item">
+          <span>Tokens:</span>
+          <span id="tokens-display" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span>Deliveries:</span>
+          <span id="deliveries-display" class="stat-value">0/3</span>
+        </div>
+        <div class="stat-item">
+          <span>Room:</span>
+          <span id="room-display" class="stat-value">(0, 0)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="startScreen">
+    <h1>Maze Explorer</h1>
+    <p>Navigate the procedurally generated maze, collect items, and deliver them to the correct nodes!</p>
+    <div class="instructions">
+      <p>🎮 <strong>Controls:</strong> Arrow keys or WASD to move</p>
+      <p>💎 <strong>Items:</strong> Collect Memory (💎), Energy (⚡), Signal (📡)</p>
+      <p>📦 <strong>Deliver:</strong> Bring items to matching delivery nodes</p>
+      <p>🗺️ <strong>Map:</strong> Reveals as you explore</p>
+      <p>⭐ <strong>Tokens:</strong> Collect tokens and complete deliveries for <span class="token-highlight">Reality Tokens!</span></p>
+    </div>
+    <button id="startButton">Explore Maze</button>
+  </div>
+  
+  <div id="completionScreen" class="hidden">
+    <h1>Maze Complete!</h1>
+    <p>You've delivered all items and collected Reality Tokens!</p>
+    <div class="token-display">+<span id="final-tokens">0</span> Reality Tokens</div>
+    <p id="total-tokens">Total Tokens: 0</p>
+    <button id="restartButton">New Maze</button>
+  </div>
+
+  <script>
+    const MAZE_SIZE = 5;
+    const ROOM_SIZE = 600;
+    const PLAYER_SIZE = 30;
+    const PLAYER_SPEED = 4;
+    
+    const ITEM_TYPES = ['memory', 'energy', 'signal'];
+    const ITEM_ICONS = { memory: '💎', energy: '⚡', signal: '📡' };
+    
+    let gameState = 'start';
+    let maze = [];
+    let currentRoom = null;
+    let playerX = 0;
+    let playerY = 0;
+    let realityTokens = 0;
+    let heldItem = null;
+    let deliveriesCompleted = 0;
+    let totalDeliveries = 3;
+    
+    const keys = { up: false, down: false, left: false, right: false };
+    
+    const roomGrid = document.getElementById('room-grid');
+    const player = document.getElementById('player');
+    const minimap = document.getElementById('minimap');
+    const heldItemDisplay = document.getElementById('held-item-display');
+    const tokensDisplay = document.getElementById('tokens-display');
+    const deliveriesDisplay = document.getElementById('deliveries-display');
+    const roomDisplay = document.getElementById('room-display');
+    const startScreen = document.getElementById('startScreen');
+    const completionScreen = document.getElementById('completionScreen');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+    const finalTokensDisplay = document.getElementById('final-tokens');
+    const totalTokensDisplay = document.getElementById('total-tokens');
+    
+    function awardRealityTokens(amount) {
+      realityTokens += amount;
+      updateUI();
+    }
+    
+    function generateMaze() {
+      maze = [];
+      
+      for (let y = 0; y < MAZE_SIZE; y++) {
+        for (let x = 0; x < MAZE_SIZE; x++) {
+          maze.push({
+            id: `${x}_${y}`,
+            x,
+            y,
+            doors: { north: false, south: false, east: false, west: false },
+            visited: false,
+            items: [],
+            tokens: [],
+            deliveryNodes: []
+          });
+        }
+      }
+      
+      const directions = [
+        { name: 'north', dx: 0, dy: -1 },
+        { name: 'south', dx: 0, dy: 1 },
+        { name: 'east', dx: 1, dy: 0 },
+        { name: 'west', dx: -1, dy: 0 }
+      ];
+      
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+      
+      function getRoom(x, y) {
+        return maze.find(r => r.x === x && r.y === y);
+      }
+      
+      function carve(x, y) {
+        const room = getRoom(x, y);
+        room.visited = true;
+        
+        const shuffledDirs = shuffle([...directions]);
+        
+        for (const dir of shuffledDirs) {
+          const nx = x + dir.dx;
+          const ny = y + dir.dy;
+          
+          if (nx >= 0 && nx < MAZE_SIZE && ny >= 0 && ny < MAZE_SIZE) {
+            const neighbor = getRoom(nx, ny);
+            if (!neighbor.visited) {
+              room.doors[dir.name] = true;
+              
+              const oppositeDir = {
+                north: 'south',
+                south: 'north',
+                east: 'west',
+                west: 'east'
+              };
+              neighbor.doors[oppositeDir[dir.name]] = true;
+              
+              carve(nx, ny);
+            }
+          }
+        }
+      }
+      
+      carve(0, 0);
+      
+      for (const room of maze) {
+        room.visited = false;
+      }
+    }
+    
+    function spawnItemsAndNodes() {
+      const shuffledRooms = [...maze].filter(r => r.id !== '0_0').sort(() => Math.random() - 0.5);
+      
+      for (let i = 0; i < totalDeliveries; i++) {
+        const itemType = ITEM_TYPES[i % ITEM_TYPES.length];
+        
+        const originRoom = shuffledRooms[i * 2];
+        const destRoom = shuffledRooms[i * 2 + 1];
+        
+        if (originRoom && destRoom) {
+          originRoom.items.push({
+            id: `item-${i}`,
+            type: itemType,
+            x: Math.random() * (ROOM_SIZE - 100) + 50,
+            y: Math.random() * (ROOM_SIZE - 100) + 50,
+            isCollected: false,
+            isDelivered: false
+          });
+          
+          destRoom.deliveryNodes.push({
+            id: `node-${i}`,
+            acceptsType: itemType,
+            x: Math.random() * (ROOM_SIZE - 100) + 50,
+            y: Math.random() * (ROOM_SIZE - 100) + 50,
+            isCompleted: false
+          });
+        }
+      }
+      
+      for (const room of maze) {
+        if (Math.random() < 0.4 && room.items.length === 0 && room.deliveryNodes.length === 0) {
+          room.tokens.push({
+            id: `token-${room.id}-${Math.random()}`,
+            x: Math.random() * (ROOM_SIZE - 100) + 50,
+            y: Math.random() * (ROOM_SIZE - 100) + 50,
+            collected: false
+          });
+        }
+      }
+    }
+    
+    function renderRoom(room) {
+      roomGrid.innerHTML = '';
+      
+      const walls = document.createElement('div');
+      
+      if (!room.doors.north) {
+        const wall = document.createElement('div');
+        wall.className = 'wall horizontal';
+        wall.style.top = '0px';
+        walls.appendChild(wall);
+      } else {
+        const door = document.createElement('div');
+        door.className = 'door horizontal';
+        door.style.top = '-10px';
+        door.style.left = `${ROOM_SIZE / 2 - 40}px`;
+        walls.appendChild(door);
+      }
+      
+      if (!room.doors.south) {
+        const wall = document.createElement('div');
+        wall.className = 'wall horizontal';
+        wall.style.bottom = '0px';
+        walls.appendChild(wall);
+      } else {
+        const door = document.createElement('div');
+        door.className = 'door horizontal';
+        door.style.bottom = '-10px';
+        door.style.left = `${ROOM_SIZE / 2 - 40}px`;
+        walls.appendChild(door);
+      }
+      
+      if (!room.doors.west) {
+        const wall = document.createElement('div');
+        wall.className = 'wall vertical';
+        wall.style.left = '0px';
+        walls.appendChild(wall);
+      } else {
+        const door = document.createElement('div');
+        door.className = 'door vertical';
+        door.style.left = '-10px';
+        door.style.top = `${ROOM_SIZE / 2 - 40}px`;
+        walls.appendChild(door);
+      }
+      
+      if (!room.doors.east) {
+        const wall = document.createElement('div');
+        wall.className = 'wall vertical';
+        wall.style.right = '0px';
+        walls.appendChild(wall);
+      } else {
+        const door = document.createElement('div');
+        door.className = 'door vertical';
+        door.style.right = '-10px';
+        door.style.top = `${ROOM_SIZE / 2 - 40}px`;
+        walls.appendChild(door);
+      }
+      
+      roomGrid.appendChild(walls);
+      
+      for (const item of room.items) {
+        if (!item.isCollected) {
+          const itemEl = document.createElement('div');
+          itemEl.className = `item ${item.type}`;
+          itemEl.style.left = `${item.x}px`;
+          itemEl.style.top = `${item.y}px`;
+          itemEl.textContent = ITEM_ICONS[item.type];
+          itemEl.dataset.itemId = item.id;
+          roomGrid.appendChild(itemEl);
+        }
+      }
+      
+      for (const token of room.tokens) {
+        if (!token.collected) {
+          const tokenEl = document.createElement('div');
+          tokenEl.className = 'token';
+          tokenEl.style.left = `${token.x}px`;
+          tokenEl.style.top = `${token.y}px`;
+          tokenEl.dataset.tokenId = token.id;
+          roomGrid.appendChild(tokenEl);
+        }
+      }
+      
+      for (const node of room.deliveryNodes) {
+        const nodeEl = document.createElement('div');
+        nodeEl.className = `delivery-node ${node.isCompleted ? 'completed' : ''}`;
+        nodeEl.style.left = `${node.x}px`;
+        nodeEl.style.top = `${node.y}px`;
+        nodeEl.textContent = node.isCompleted ? '✓' : '?';
+        nodeEl.dataset.nodeId = node.id;
+        roomGrid.appendChild(nodeEl);
+      }
+    }
+    
+    function updateMinimap() {
+      minimap.innerHTML = '';
+      
+      for (let y = 0; y < MAZE_SIZE; y++) {
+        for (let x = 0; x < MAZE_SIZE; x++) {
+          const cell = document.createElement('div');
+          const room = getRoom(x, y);
+          
+          if (room && room.visited) {
+            cell.className = 'minimap-cell visited';
+            if (currentRoom && room.id === currentRoom.id) {
+              cell.classList.add('current');
+            }
+            
+            if (room.doors.north) {
+              const indicator = document.createElement('span');
+              indicator.className = 'door-indicator north';
+              indicator.textContent = '↑';
+              cell.appendChild(indicator);
+            }
+            if (room.doors.south) {
+              const indicator = document.createElement('span');
+              indicator.className = 'door-indicator south';
+              indicator.textContent = '↓';
+              cell.appendChild(indicator);
+            }
+            if (room.doors.west) {
+              const indicator = document.createElement('span');
+              indicator.className = 'door-indicator west';
+              indicator.textContent = '←';
+              cell.appendChild(indicator);
+            }
+            if (room.doors.east) {
+              const indicator = document.createElement('span');
+              indicator.className = 'door-indicator east';
+              indicator.textContent = '→';
+              cell.appendChild(indicator);
+            }
+            
+            for (const item of room.items) {
+              if (!item.isCollected) {
+                const itemIndicator = document.createElement('span');
+                itemIndicator.className = 'minimap-item';
+                itemIndicator.textContent = ITEM_ICONS[item.type];
+                cell.appendChild(itemIndicator);
+              }
+            }
+            
+            for (const node of room.deliveryNodes) {
+              if (!node.isCompleted) {
+                const nodeIndicator = document.createElement('span');
+                nodeIndicator.className = 'minimap-node';
+                nodeIndicator.textContent = '?';
+                cell.appendChild(nodeIndicator);
+              }
+            }
+          } else {
+            cell.className = 'minimap-cell';
+          }
+          
+          minimap.appendChild(cell);
+        }
+      }
+    }
+    
+    function getRoom(x, y) {
+      return maze.find(r => r.x === x && r.y === y);
+    }
+    
+    function checkCollision(x, y) {
+      const doorWidth = 80;
+      const doorZone = ROOM_SIZE / 2 - doorWidth / 2;
+      const doorZoneEnd = ROOM_SIZE / 2 + doorWidth / 2;
+      
+      const inDoorZoneX = playerX >= doorZone && playerX <= doorZoneEnd;
+      const inDoorZoneY = playerY >= doorZone && playerY <= doorZoneEnd;
+      
+      if (x < 0) {
+        if (currentRoom.doors.west && inDoorZoneY) return 'west';
+        return true;
+      }
+      if (x > ROOM_SIZE - PLAYER_SIZE) {
+        if (currentRoom.doors.east && inDoorZoneY) return 'east';
+        return true;
+      }
+      if (y < 0) {
+        if (currentRoom.doors.north && inDoorZoneX) return 'north';
+        return true;
+      }
+      if (y > ROOM_SIZE - PLAYER_SIZE) {
+        if (currentRoom.doors.south && inDoorZoneX) return 'south';
+        return true;
+      }
+      
+      return false;
+    }
+    
+    function checkOverlap(x, y, targetX, targetY, targetSize) {
+      return (
+        x < targetX + targetSize &&
+        x + PLAYER_SIZE > targetX &&
+        y < targetY + targetSize &&
+        y + PLAYER_SIZE > targetY
+      );
+    }
+    
+    function updatePlayer() {
+      if (gameState !== 'playing') return;
+      
+      let newX = playerX;
+      let newY = playerY;
+      
+      if (keys.up) newY -= PLAYER_SPEED;
+      if (keys.down) newY += PLAYER_SPEED;
+      if (keys.left) newX -= PLAYER_SPEED;
+      if (keys.right) newX += PLAYER_SPEED;
+      
+      const collision = checkCollision(newX, newY);
+      
+      if (collision === 'north' && currentRoom.doors.north) {
+        transitionRoom(0, -1, 'north');
+        return;
+      } else if (collision === 'south' && currentRoom.doors.south) {
+        transitionRoom(0, 1, 'south');
+        return;
+      } else if (collision === 'west' && currentRoom.doors.west) {
+        transitionRoom(-1, 0, 'west');
+        return;
+      } else if (collision === 'east' && currentRoom.doors.east) {
+        transitionRoom(1, 0, 'east');
+        return;
+      } else if (collision !== false) {
+        return;
+      }
+      
+      playerX = newX;
+      playerY = newY;
+      
+      for (const item of currentRoom.items) {
+        if (!item.isCollected && checkOverlap(playerX, playerY, item.x, item.y, 40)) {
+          if (!heldItem) {
+            heldItem = item;
+            item.isCollected = true;
+            updateHeldItemDisplay();
+            renderRoom(currentRoom);
+            break;
+          }
+        }
+      }
+      
+      for (const token of currentRoom.tokens) {
+        if (!token.collected && checkOverlap(playerX, playerY, token.x, token.y, 30)) {
+          token.collected = true;
+          awardRealityTokens(1);
+          renderRoom(currentRoom);
+          break;
+        }
+      }
+      
+      for (const node of currentRoom.deliveryNodes) {
+        if (!node.isCompleted && heldItem && checkOverlap(playerX, playerY, node.x, node.y, 50)) {
+          if (heldItem.type === node.acceptsType) {
+            node.isCompleted = true;
+            heldItem.isDelivered = true;
+            heldItem = null;
+            deliveriesCompleted++;
+            awardRealityTokens(5);
+            updateHeldItemDisplay();
+            renderRoom(currentRoom);
+            updateUI();
+            
+            if (deliveriesCompleted === totalDeliveries) {
+              handleCompletion();
+            }
+            break;
+          }
+        }
+      }
+      
+      player.style.left = `${playerX}px`;
+      player.style.top = `${playerY}px`;
+    }
+    
+    function transitionRoom(dx, dy, direction) {
+      const newRoom = getRoom(currentRoom.x + dx, currentRoom.y + dy);
+      
+      if (!newRoom) return;
+      
+      currentRoom = newRoom;
+      currentRoom.visited = true;
+      
+      const oppositeDir = {
+        north: 'south',
+        south: 'north',
+        west: 'east',
+        east: 'west'
+      };
+      
+      switch (oppositeDir[direction]) {
+        case 'north':
+          playerY = ROOM_SIZE - PLAYER_SIZE - 20;
+          playerX = ROOM_SIZE / 2 - PLAYER_SIZE / 2;
+          break;
+        case 'south':
+          playerY = 20;
+          playerX = ROOM_SIZE / 2 - PLAYER_SIZE / 2;
+          break;
+        case 'west':
+          playerX = ROOM_SIZE - PLAYER_SIZE - 20;
+          playerY = ROOM_SIZE / 2 - PLAYER_SIZE / 2;
+          break;
+        case 'east':
+          playerX = 20;
+          playerY = ROOM_SIZE / 2 - PLAYER_SIZE / 2;
+          break;
+      }
+      
+      renderRoom(currentRoom);
+      updateMinimap();
+      updateUI();
+    }
+    
+    function updateHeldItemDisplay() {
+      if (heldItem) {
+        const typeLabels = { memory: 'Memory 💎', energy: 'Energy ⚡', signal: 'Signal 📡' };
+        heldItemDisplay.textContent = `Holding: ${typeLabels[heldItem.type]}`;
+        heldItemDisplay.className = '';
+      } else {
+        heldItemDisplay.textContent = 'Holding: None';
+        heldItemDisplay.className = 'empty';
+      }
+    }
+    
+    function updateUI() {
+      tokensDisplay.textContent = realityTokens;
+      deliveriesDisplay.textContent = `${deliveriesCompleted}/${totalDeliveries}`;
+      roomDisplay.textContent = currentRoom ? `(${currentRoom.x}, ${currentRoom.y})` : '(0, 0)';
+    }
+    
+    function gameLoop() {
+      if (gameState === 'playing') {
+        updatePlayer();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+    
+    function handleCompletion() {
+      gameState = 'complete';
+      awardRealityTokens(20);
+      
+      finalTokensDisplay.textContent = realityTokens;
+      totalTokensDisplay.textContent = `Total Tokens: ${realityTokens}`;
+      completionScreen.classList.remove('hidden');
+    }
+    
+    function startGame() {
+      gameState = 'playing';
+      realityTokens = 0;
+      heldItem = null;
+      deliveriesCompleted = 0;
+      
+      generateMaze();
+      spawnItemsAndNodes();
+      
+      currentRoom = getRoom(0, 0);
+      currentRoom.visited = true;
+      
+      playerX = ROOM_SIZE / 2 - PLAYER_SIZE / 2;
+      playerY = ROOM_SIZE / 2 - PLAYER_SIZE / 2;
+      
+      player.style.left = `${playerX}px`;
+      player.style.top = `${playerY}px`;
+      
+      renderRoom(currentRoom);
+      updateMinimap();
+      updateHeldItemDisplay();
+      updateUI();
+      
+      startScreen.classList.add('hidden');
+      completionScreen.classList.add('hidden');
+      
+      gameLoop();
+    }
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = true;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = true;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+      
+      e.preventDefault();
+    });
+    
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = false;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = false;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+    });
+    
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', startGame);
+    
+    updateUI();
+  </script>
+</body>
+</html>

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driving Minigame - Reality Tokens</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box }
+    
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #1a0a2e 0%, #16213e 50%, #0f0f23 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden
+    }
+    
+    #game {
+      width: 400px;
+      height: 600px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #0d0d1a 0%, #151525 100%);
+      border: 3px solid #9d4edd;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(157, 78, 221, 0.4)
+    }
+    
+    #road {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      background: linear-gradient(180deg, #0a0a12 0%, #0f0f1a 100%);
+      overflow: hidden
+    }
+    
+    #road::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 6px;
+      height: 200%;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.8) 0px,
+        rgba(255, 255, 255, 0.8) 30px,
+        transparent 30px,
+        transparent 60px
+      );
+      transform: translateX(-50%);
+      animation: roadScroll 0.6s linear infinite
+    }
+    
+    @keyframes roadScroll {
+      from { transform: translateX(-50%) translateY(0) }
+      to { transform: translateX(-50%) translateY(-60px) }
+    }
+    
+    #road-sides {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none
+    }
+    
+    #road-sides::before,
+    #road-sides::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 20px;
+      background: linear-gradient(180deg, #c77dff 0%, #9d4edd 50%, #7b2cbf 100%);
+      opacity: 0.3
+    }
+    
+    #road-sides::before { left: 0 }
+    #road-sides::after { right: 0 }
+    
+    #player {
+      width: 50px;
+      height: 80px;
+      position: absolute;
+      background: linear-gradient(135deg, #9d4edd 0%, #c77dff 50%, #e0aaff 100%);
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(157, 78, 221, 0.6);
+      z-index: 10;
+      transition: left 0.05s linear
+    }
+    
+    #player::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px
+    }
+    
+    .obstacle {
+      width: 50px;
+      height: 80px;
+      position: absolute;
+      background: linear-gradient(135deg, #e63946 0%, #f77f00 50%, #ff6b6b 100%);
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(230, 57, 70, 0.6);
+      z-index: 5
+    }
+    
+    .obstacle::after {
+      content: '⚠';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: #fff;
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.5)
+    }
+    
+    .token {
+      width: 30px;
+      height: 30px;
+      position: absolute;
+      background: radial-gradient(circle, #48cae4 0%, #00b4d8 50%, #0077b6 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0, 180, 216, 0.8), 0 0 40px rgba(0, 180, 216, 0.4);
+      z-index: 6;
+      animation: tokenGlow 1s ease-in-out infinite alternate
+    }
+    
+    @keyframes tokenGlow {
+      from { box-shadow: 0 0 20px rgba(0, 180, 216, 0.8), 0 0 40px rgba(0, 180, 216, 0.4) }
+      to { box-shadow: 0 0 30px rgba(0, 180, 216, 1), 0 0 60px rgba(0, 180, 216, 0.6) }
+    }
+    
+    .token::after {
+      content: '◆';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px;
+      color: #fff;
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.5)
+    }
+    
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 20;
+      pointer-events: none
+    }
+    
+    #score,
+    #tokens {
+      background: linear-gradient(135deg, rgba(157, 78, 221, 0.8) 0%, rgba(123, 44, 191, 0.9) 100%);
+      color: #fff;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(157, 78, 221, 0.5)
+    }
+    
+    #tokens {
+      background: linear-gradient(135deg, rgba(0, 180, 216, 0.8) 0%, rgba(0, 119, 182, 0.9) 100%);
+      box-shadow: 0 0 10px rgba(0, 180, 216, 0.5)
+    }
+    
+    #startScreen,
+    #gameOverScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(13, 13, 26, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      gap: 20px
+    }
+    
+    #startScreen h1,
+    #gameOverScreen h1 {
+      color: #c77dff;
+      font-size: 2rem;
+      font-weight: 700;
+      text-shadow: 0 0 20px rgba(199, 125, 255, 0.6)
+    }
+    
+    #startScreen p,
+    #gameOverScreen p {
+      color: #e8e8e8;
+      font-size: 1rem;
+      opacity: 0.8;
+      text-align: center;
+      max-width: 300px
+    }
+    
+    #startScreen button,
+    #gameOverScreen button {
+      background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+      color: #fff;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(157, 78, 221, 0.5)
+    }
+    
+    #startScreen button:hover,
+    #gameOverScreen button:hover {
+      background: linear-gradient(135deg, #c77dff 0%, #e0aaff 100%);
+      box-shadow: 0 0 30px rgba(199, 125, 255, 0.7);
+      transform: scale(1.05)
+    }
+    
+    #gameOverScreen button {
+      background: linear-gradient(135deg, #e63946 0%, #f77f00 100%);
+      box-shadow: 0 0 20px rgba(230, 57, 70, 0.5)
+    }
+    
+    #gameOverScreen button:hover {
+      background: linear-gradient(135deg, #f77f00 0%, #ff6b6b 100%);
+      box-shadow: 0 0 30px rgba(247, 127, 0, 0.7)
+    }
+    
+    .hidden { display: none !important }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="road"></div>
+    <div id="road-sides"></div>
+    <div id="player"></div>
+    
+    <div id="ui">
+      <div id="score">Score: 0</div>
+      <div id="tokens">Reality Tokens: 0</div>
+    </div>
+    
+    <div id="startScreen">
+      <h1>Reality Drive</h1>
+      <p>Collect Reality Tokens while avoiding obstacles!</p>
+      <p>Use Arrow Keys or A/D to move</p>
+      <button id="startButton">Start Game</button>
+    </div>
+    
+    <div id="gameOverScreen" class="hidden">
+      <h1>Game Over</h1>
+      <p id="finalScore">Score: 0</p>
+      <p id="finalTokens">Reality Tokens: 0</p>
+      <button id="restartButton">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const GAME_WIDTH = 400;
+    const GAME_HEIGHT = 600;
+    const PLAYER_WIDTH = 50;
+    const PLAYER_HEIGHT = 80;
+    const OBSTACLE_WIDTH = 50;
+    const OBSTACLE_HEIGHT = 80;
+    const TOKEN_SIZE = 30;
+    const BASE_SPEED = 4;
+    
+    let gameState = 'start';
+    let score = 0;
+    let realityTokens = 0;
+    let playerX = GAME_WIDTH / 2 - PLAYER_WIDTH / 2;
+    let playerY = GAME_HEIGHT - PLAYER_HEIGHT - 20;
+    let obstacles = [];
+    let tokens = [];
+    let lastObstacleSpawn = 0;
+    let lastTokenSpawn = 0;
+    let animationFrameId = null;
+    
+    const player = document.getElementById('player');
+    const scoreDisplay = document.getElementById('score');
+    const tokensDisplay = document.getElementById('tokens');
+    const startScreen = document.getElementById('startScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+    const finalScoreDisplay = document.getElementById('finalScore');
+    const finalTokensDisplay = document.getElementById('finalTokens');
+    const gameContainer = document.getElementById('game');
+    
+    const keys = {
+      left: false,
+      right: false
+    };
+    
+    function addRealityToken(amount) {
+      realityTokens += amount;
+      updateUI();
+    }
+    
+    function updateUI() {
+      scoreDisplay.textContent = `Score: ${Math.floor(score)}`;
+      tokensDisplay.textContent = `Reality Tokens: ${realityTokens}`;
+    }
+    
+    function spawnObstacle() {
+      const obstacle = document.createElement('div');
+      obstacle.className = 'obstacle';
+      const maxX = GAME_WIDTH - OBSTACLE_WIDTH;
+      const x = Math.random() * maxX;
+      obstacle.style.left = `${x}px`;
+      obstacle.style.top = `-${OBSTACLE_HEIGHT}px`;
+      gameContainer.appendChild(obstacle);
+      obstacles.push({ element: obstacle, x, y: -OBSTACLE_HEIGHT });
+    }
+    
+    function spawnToken() {
+      const token = document.createElement('div');
+      token.className = 'token';
+      const maxX = GAME_WIDTH - TOKEN_SIZE;
+      const x = Math.random() * maxX;
+      token.style.left = `${x}px`;
+      token.style.top = `-${TOKEN_SIZE}px`;
+      gameContainer.appendChild(token);
+      tokens.push({ element: token, x, y: -TOKEN_SIZE });
+    }
+    
+    function checkCollision(rect1, rect2) {
+      return !(rect1.right < rect2.left || 
+               rect1.left > rect2.right || 
+               rect1.bottom < rect2.top || 
+               rect1.top > rect2.bottom);
+    }
+    
+    function movePlayer() {
+      const speed = 6;
+      if (keys.left && playerX > 0) {
+        playerX = Math.max(0, playerX - speed);
+      }
+      if (keys.right && playerX < GAME_WIDTH - PLAYER_WIDTH) {
+        playerX = Math.min(GAME_WIDTH - PLAYER_WIDTH, playerX + speed);
+      }
+      player.style.left = `${playerX}px`;
+      player.style.top = `${playerY}px`;
+    }
+    
+    function updateObstacles() {
+      const playerRect = player.getBoundingClientRect();
+      
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obstacle = obstacles[i];
+        obstacle.y += BASE_SPEED;
+        obstacle.element.style.top = `${obstacle.y}px`;
+        
+        const obstacleRect = obstacle.element.getBoundingClientRect();
+        
+        if (checkCollision(playerRect, obstacleRect)) {
+          gameOver();
+          return;
+        }
+        
+        if (obstacle.y > GAME_HEIGHT) {
+          obstacle.element.remove();
+          obstacles.splice(i, 1);
+        }
+      }
+    }
+    
+    function updateTokens() {
+      const playerRect = player.getBoundingClientRect();
+      
+      for (let i = tokens.length - 1; i >= 0; i--) {
+        const token = tokens[i];
+        token.y += BASE_SPEED;
+        token.element.style.top = `${token.y}px`;
+        
+        const tokenRect = token.element.getBoundingClientRect();
+        
+        if (checkCollision(playerRect, tokenRect)) {
+          addRealityToken(1);
+          token.element.remove();
+          tokens.splice(i, 1);
+          continue;
+        }
+        
+        if (token.y > GAME_HEIGHT) {
+          token.element.remove();
+          tokens.splice(i, 1);
+        }
+      }
+    }
+    
+    function gameLoop(timestamp) {
+      if (gameState !== 'playing') return;
+      
+      score += 0.1;
+      updateUI();
+      
+      movePlayer();
+      
+      if (timestamp - lastObstacleSpawn > 1200) {
+        spawnObstacle();
+        lastObstacleSpawn = timestamp;
+      }
+      
+      if (timestamp - lastTokenSpawn > 2000) {
+        spawnToken();
+        lastTokenSpawn = timestamp;
+      }
+      
+      updateObstacles();
+      
+      if (gameState === 'playing') {
+        updateTokens();
+      }
+      
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    
+    function startGame() {
+      gameState = 'playing';
+      score = 0;
+      playerX = GAME_WIDTH / 2 - PLAYER_WIDTH / 2;
+      obstacles = [];
+      tokens = [];
+      
+      obstacles.forEach(o => o.element.remove());
+      tokens.forEach(t => t.element.remove());
+      
+      updateUI();
+      
+      startScreen.classList.add('hidden');
+      gameOverScreen.classList.add('hidden');
+      
+      lastObstacleSpawn = 0;
+      lastTokenSpawn = 0;
+      
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    
+    function gameOver() {
+      gameState = 'gameover';
+      cancelAnimationFrame(animationFrameId);
+      
+      finalScoreDisplay.textContent = `Score: ${Math.floor(score)}`;
+      finalTokensDisplay.textContent = `Reality Tokens: ${realityTokens}`;
+      
+      gameOverScreen.classList.remove('hidden');
+    }
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        keys.left = true;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        keys.right = true;
+      }
+    });
+    
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        keys.left = false;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        keys.right = false;
+      }
+    });
+    
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', startGame);
+    
+    updateUI();
+  </script>
+</body>
+</html>

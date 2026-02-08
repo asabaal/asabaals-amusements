@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cleaning Minigame - Reality Tokens</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box }
+    
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #2d1b2e 0%, #4a2c4a 50%, #3d2a45 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden
+    }
+    
+    #game {
+      width: 800px;
+      height: 500px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #f5e6d3 0%, #e8d4be 100%);
+      border: 3px solid #9d4edd;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(157, 78, 221, 0.4)
+    }
+    
+    #room-surface {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: linear-gradient(180deg, #f5e6d3 0%, #e8d4be 100%);
+      background-image: 
+        radial-gradient(circle at 20% 30%, rgba(157, 78, 221, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(0, 180, 216, 0.05) 0%, transparent 50%)
+    }
+    
+    .zone {
+      position: absolute;
+      border-radius: 12px;
+      border: 3px dashed rgba(100, 100, 100, 0.4);
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 1;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1)
+    }
+    
+    .zone:hover {
+      transform: scale(1.05);
+      border-color: rgba(255, 255, 255, 0.6)
+    }
+    
+    .zone.activeZone {
+      border-color: #fff;
+      border-style: solid;
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.08);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3)
+    }
+    
+    .zone-icon {
+      font-size: 32px;
+      margin-bottom: 5px
+    }
+    
+    .zone-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #4a4a4a;
+      text-transform: uppercase;
+      letter-spacing: 1px
+    }
+    
+    .zone.laundry {
+      border-color: rgba(157, 78, 221, 0.4);
+      background: rgba(157, 78, 221, 0.1)
+    }
+    
+    .zone.trash {
+      border-color: rgba(120, 80, 60, 0.4);
+      background: rgba(120, 80, 60, 0.1)
+    }
+    
+    .zone.dishes {
+      border-color: rgba(0, 180, 216, 0.4);
+      background: rgba(0, 180, 216, 0.1)
+    }
+    
+    .zone.books {
+      border-color: rgba(255, 140, 0, 0.4);
+      background: rgba(255, 140, 0, 0.1)
+    }
+    
+    .item {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 28px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 2;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      user-select: none
+    }
+    
+    .item:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4)
+    }
+    
+    .item.held {
+      transform: scale(1.15);
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.6), 0 8px 25px rgba(0, 0, 0, 0.5);
+      animation: pulse 1s ease-in-out infinite
+    }
+    
+    .item.placed {
+      opacity: 0.7;
+      pointer-events: none;
+      transform: scale(0.95);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2)
+    }
+    
+    .item.shake {
+      animation: shake 0.3s ease-in-out
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.6), 0 8px 25px rgba(0, 0, 0, 0.5) }
+      50% { box-shadow: 0 0 35px rgba(255, 255, 255, 0.8), 0 10px 30px rgba(0, 0, 0, 0.6) }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0) }
+      20%, 60% { transform: translateX(-5px) }
+      40%, 80% { transform: translateX(5px) }
+    }
+    
+    .item.laundry {
+      background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+      border: 2px solid rgba(199, 125, 255, 0.5)
+    }
+    
+    .item.trash {
+      background: linear-gradient(135deg, #78503c 0%, #a67c52 100%);
+      border: 2px solid rgba(166, 124, 82, 0.5)
+    }
+    
+    .item.dishes {
+      background: linear-gradient(135deg, #00b4d8 0%, #48cae4 100%);
+      border: 2px solid rgba(72, 202, 228, 0.5)
+    }
+    
+    .item.books {
+      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
+      border: 2px solid rgba(255, 165, 0, 0.5)
+    }
+    
+    #ui-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(45, 27, 46, 0.9);
+      border-radius: 10px;
+      padding: 12px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3)
+    }
+    
+    #ui-left, #ui-right {
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+    
+    #ui-center {
+      flex: 1;
+      margin: 0 20px
+    }
+    
+    .ui-text {
+      color: #e8e8e8;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+    
+    .ui-text strong {
+      color: #c77dff;
+      font-size: 0.95rem
+    }
+    
+    #progress-container {
+      width: 100%;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid rgba(157, 78, 221, 0.4)
+    }
+    
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #9d4edd 0%, #c77dff 50%, #e0aaff 100%);
+      border-radius: 8px;
+      transition: width 0.5s ease;
+      box-shadow: 0 0 10px rgba(157, 78, 221, 0.5)
+    }
+    
+    #held-item-text {
+      color: #48cae4;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      padding: 4px 12px;
+      background: rgba(0, 180, 216, 0.2);
+      border-radius: 6px;
+      border: 1px solid rgba(72, 202, 228, 0.4)
+    }
+    
+    #startScreen, #completionScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(45, 27, 46, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      gap: 20px
+    }
+    
+    #startScreen h1, #completionScreen h1 {
+      color: #c77dff;
+      font-size: 2.2rem;
+      font-weight: 700;
+      text-shadow: 0 0 30px rgba(199, 125, 255, 0.6);
+      margin-bottom: 10px
+    }
+    
+    #startScreen p, #completionScreen p {
+      color: #e8e8e8;
+      font-size: 1rem;
+      opacity: 0.85;
+      text-align: center;
+      max-width: 400px;
+      line-height: 1.5
+    }
+    
+    #startScreen .instructions {
+      background: rgba(157, 78, 221, 0.15);
+      border: 1px solid rgba(157, 78, 221, 0.4);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 10px 0
+    }
+    
+    #startScreen .instructions p {
+      max-width: 450px
+    }
+    
+    .token-highlight {
+      color: #48cae4;
+      font-weight: 600
+    }
+    
+    #startScreen button, #completionScreen button {
+      background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+      color: #fff;
+      border: none;
+      padding: 18px 50px;
+      border-radius: 10px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 25px rgba(157, 78, 221, 0.5);
+      margin-top: 10px
+    }
+    
+    #startScreen button:hover, #completionScreen button:hover {
+      background: linear-gradient(135deg, #c77dff 0%, #e0aaff 100%);
+      box-shadow: 0 0 40px rgba(199, 125, 255, 0.7);
+      transform: scale(1.05)
+    }
+    
+    #completionScreen button {
+      background: linear-gradient(135deg, #00b4d8 0%, #48cae4 100%);
+      box-shadow: 0 0 25px rgba(0, 180, 216, 0.5)
+    }
+    
+    #completionScreen button:hover {
+      background: linear-gradient(135deg, #48cae4 0%, #90e0ef 100%);
+      box-shadow: 0 0 40px rgba(72, 202, 228, 0.7)
+    }
+    
+    .token-display {
+      font-size: 3rem;
+      color: #48cae4;
+      font-weight: 700;
+      text-shadow: 0 0 30px rgba(72, 202, 228, 0.6);
+      margin: 15px 0
+    }
+    
+    .hidden { display: none !important }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="room-surface"></div>
+    
+    <div id="ui-panel">
+      <div id="ui-left">
+        <div class="ui-text">Cleanliness: <strong id="cleanliness-text">0%</strong></div>
+        <div class="ui-text">Items: <strong id="placed-text">0/12</strong></div>
+      </div>
+      <div id="ui-center">
+        <div id="progress-container">
+          <div id="progress-fill"></div>
+        </div>
+      </div>
+      <div id="ui-right">
+        <div id="held-item-text">Holding: None</div>
+        <div class="ui-text">Tokens: <strong id="tokens-text">0</strong></div>
+      </div>
+    </div>
+    
+    <div id="startScreen">
+      <h1>Room Cleanup</h1>
+      <p>Organize the messy room by placing items into their correct zones!</p>
+      <div class="instructions">
+        <p>👕 <strong>Laundry</strong> → Laundry Basket</p>
+        <p>🗑️ <strong>Trash</strong> → Trash Bin</p>
+        <p>🍽️ <strong>Dishes</strong> → Dish Sink</p>
+        <p>📚 <strong>Books</strong> → Book Shelf</p>
+        <p style="margin-top: 10px">Click an item to pick it up, then click the correct zone to place it.</p>
+        <p style="margin-top: 8px">Complete the cleanup to earn <span class="token-highlight">12 Reality Tokens!</span></p>
+      </div>
+      <button id="startButton">Start Cleaning</button>
+    </div>
+    
+    <div id="completionScreen" class="hidden">
+      <h1>Room Cleaned!</h1>
+      <p>Great job! You've organized the entire room.</p>
+      <div class="token-display">+12 Reality Tokens</div>
+      <p id="total-tokens">Total Tokens: 12</p>
+      <button id="restartButton">Clean Again</button>
+    </div>
+  </div>
+
+  <script>
+    const zonesConfig = [
+      { id: 'laundry-zone', type: 'laundry', x: 50, y: 350, width: 120, height: 120, icon: '🧺', label: 'Laundry' },
+      { id: 'trash-zone', type: 'trash', x: 200, y: 350, width: 120, height: 120, icon: '🗑️', label: 'Trash' },
+      { id: 'dishes-zone', type: 'dishes', x: 480, y: 50, width: 120, height: 120, icon: '🍽️', label: 'Dishes' },
+      { id: 'books-zone', type: 'books', x: 630, y: 50, width: 120, height: 120, icon: '📚', label: 'Books' }
+    ];
+    
+    const itemsConfig = [
+      { id: 'laundry-1', type: 'laundry', icon: '👕' },
+      { id: 'laundry-2', type: 'laundry', icon: '👖' },
+      { id: 'laundry-3', type: 'laundry', icon: '🧥' },
+      { id: 'trash-1', type: 'trash', icon: '📦' },
+      { id: 'trash-2', type: 'trash', icon: '📄' },
+      { id: 'trash-3', type: 'trash', icon: '🗞️' },
+      { id: 'dishes-1', type: 'dishes', icon: '🍽️' },
+      { id: 'dishes-2', type: 'dishes', icon: '🥣' },
+      { id: 'dishes-3', type: 'dishes', icon: '🥢' },
+      { id: 'books-1', type: 'books', icon: '📕' },
+      { id: 'books-2', type: 'books', icon: '📗' },
+      { id: 'books-3', type: 'books', icon: '📘' }
+    ];
+    
+    let gameState = 'start';
+    let heldItemId = null;
+    let realityTokens = 0;
+    let items = [];
+    let placedItems = 0;
+    
+    const gameContainer = document.getElementById('game');
+    const roomSurface = document.getElementById('room-surface');
+    const cleanlinessText = document.getElementById('cleanliness-text');
+    const placedText = document.getElementById('placed-text');
+    const progressFill = document.getElementById('progress-fill');
+    const heldItemText = document.getElementById('held-item-text');
+    const tokensText = document.getElementById('tokens-text');
+    const startScreen = document.getElementById('startScreen');
+    const completionScreen = document.getElementById('completionScreen');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+    const totalTokensDisplay = document.getElementById('total-tokens');
+    
+    function getRandomPosition() {
+      const minX = 50;
+      const maxX = 700;
+      const minY = 50;
+      const maxY = 300;
+      
+      return {
+        x: Math.random() * (maxX - minX) + minX,
+        y: Math.random() * (maxY - minY) + minY
+      };
+    }
+    
+    function awardRealityTokens(amount) {
+      realityTokens += amount;
+      updateUI();
+    }
+    
+    function updateUI() {
+      const totalItems = itemsConfig.length;
+      const cleanlinessPercent = placedItems > 0 ? Math.floor((placedItems / totalItems) * 100) : 0;
+      
+      cleanlinessText.textContent = `${cleanlinessPercent}%`;
+      placedText.textContent = `${placedItems}/${totalItems}`;
+      progressFill.style.width = `${cleanlinessPercent}%`;
+      tokensText.textContent = realityTokens;
+      
+      if (heldItemId) {
+        const heldItem = items.find(i => i.id === heldItemId);
+        if (heldItem) {
+          const typeLabels = {
+            laundry: 'Laundry',
+            trash: 'Trash',
+            dishes: 'Dishes',
+            books: 'Books'
+          };
+          heldItemText.textContent = `Holding: ${typeLabels[heldItem.type]}`;
+          heldItemText.style.color = '#48cae4';
+          heldItemText.style.background = 'rgba(0, 180, 216, 0.2)';
+          heldItemText.style.borderColor = 'rgba(72, 202, 228, 0.4)';
+        }
+      } else {
+        heldItemText.textContent = 'Holding: None';
+        heldItemText.style.color = '#999';
+        heldItemText.style.background = 'rgba(255, 255, 255, 0.1)';
+        heldItemText.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+      }
+    }
+    
+    function createZones() {
+      zonesConfig.forEach(zoneConfig => {
+        const zone = document.createElement('div');
+        zone.className = `zone ${zoneConfig.type}`;
+        zone.id = zoneConfig.id;
+        zone.style.left = `${zoneConfig.x}px`;
+        zone.style.top = `${zoneConfig.y}px`;
+        zone.style.width = `${zoneConfig.width}px`;
+        zone.style.height = `${zoneConfig.height}px`;
+        zone.setAttribute('data-accepts-type', zoneConfig.type);
+        
+        const icon = document.createElement('div');
+        icon.className = 'zone-icon';
+        icon.textContent = zoneConfig.icon;
+        
+        const label = document.createElement('div');
+        label.className = 'zone-label';
+        label.textContent = zoneConfig.label;
+        
+        zone.appendChild(icon);
+        zone.appendChild(label);
+        
+        zone.addEventListener('click', () => handleZoneClick(zoneConfig.id));
+        zone.addEventListener('mouseenter', () => handleZoneHover(zone, true));
+        zone.addEventListener('mouseleave', () => handleZoneHover(zone, false));
+        
+        roomSurface.appendChild(zone);
+      });
+    }
+    
+    function createItems() {
+      items = [];
+      itemsConfig.forEach(itemConfig => {
+        const pos = getRandomPosition();
+        const item = document.createElement('div');
+        item.className = `item ${itemConfig.type}`;
+        item.id = itemConfig.id;
+        item.setAttribute('data-item-id', itemConfig.id);
+        item.setAttribute('data-item-type', itemConfig.type);
+        item.textContent = itemConfig.icon;
+        
+        item.style.left = `${pos.x}px`;
+        item.style.top = `${pos.y}px`;
+        
+        const itemData = {
+          id: itemConfig.id,
+          type: itemConfig.type,
+          element: item,
+          originX: pos.x,
+          originY: pos.y,
+          isPlaced: false
+        };
+        
+        items.push(itemData);
+        
+        item.addEventListener('click', () => handleItemClick(itemData));
+        
+        roomSurface.appendChild(item);
+      });
+    }
+    
+    function handleItemClick(itemData) {
+      if (gameState !== 'playing') return;
+      if (itemData.isPlaced) return;
+      
+      if (heldItemId !== null) {
+        const prevHeldItem = items.find(i => i.id === heldItemId);
+        if (prevHeldItem) {
+          prevHeldItem.element.classList.remove('held');
+        }
+      }
+      
+      heldItemId = itemData.id;
+      itemData.element.classList.add('held');
+      updateUI();
+    }
+    
+    function handleZoneClick(zoneId) {
+      if (gameState !== 'playing' || heldItemId === null) return;
+      
+      const zone = zonesConfig.find(z => z.id === zoneId);
+      const heldItem = items.find(i => i.id === heldItemId);
+      
+      if (!heldItem || !zone) return;
+      
+      if (heldItem.type === zone.type) {
+        heldItem.element.style.left = `${zone.x + zone.width / 2 - 30}px`;
+        heldItem.element.style.top = `${zone.y + zone.height / 2 - 30}px`;
+        heldItem.element.classList.remove('held');
+        heldItem.element.classList.add('placed');
+        heldItem.isPlaced = true;
+        placedItems++;
+        updateUI();
+        
+        if (placedItems === itemsConfig.length) {
+          handleCompletion();
+        }
+      } else {
+        heldItem.element.style.left = `${heldItem.originX}px`;
+        heldItem.element.style.top = `${heldItem.originY}px`;
+        heldItem.element.classList.remove('held');
+        heldItem.element.classList.add('shake');
+        setTimeout(() => {
+          heldItem.element.classList.remove('shake');
+        }, 300);
+      }
+      
+      heldItemId = null;
+      updateUI();
+    }
+    
+    function handleZoneHover(zone, isHovering) {
+      if (heldItemId !== null && gameState === 'playing') {
+        if (isHovering) {
+          zone.classList.add('activeZone');
+        } else {
+          zone.classList.remove('activeZone');
+        }
+      }
+    }
+    
+    function handleCompletion() {
+      gameState = 'complete';
+      awardRealityTokens(itemsConfig.length);
+      
+      totalTokensDisplay.textContent = `Total Tokens: ${realityTokens}`;
+      completionScreen.classList.remove('hidden');
+    }
+    
+    function startGame() {
+      gameState = 'playing';
+      heldItemId = null;
+      placedItems = 0;
+      
+      items.forEach(item => {
+        item.element.remove();
+      });
+      
+      createItems();
+      updateUI();
+      
+      startScreen.classList.add('hidden');
+      completionScreen.classList.add('hidden');
+    }
+    
+    function restartGame() {
+      gameState = 'playing';
+      heldItemId = null;
+      placedItems = 0;
+      realityTokens = 0;
+      
+      items.forEach(item => {
+        item.element.remove();
+      });
+      
+      createItems();
+      updateUI();
+      
+      completionScreen.classList.add('hidden');
+    }
+    
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', restartGame);
+    
+    createZones();
+    updateUI();
+  </script>
+</body>
+</html>

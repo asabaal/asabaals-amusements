@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""
+Simple Audio Transcription CLI
+
+Uses faster-whisper to get word-level timestamps for lyrics alignment.
+"""
+
+import argparse
+import json
+import logging
+import sys
+from pathlib import Path
+from datetime import timedelta
+import subprocess
+import shlex
+
+
+def run_command(cmd: str) -> str:
+    """Execute a shell command and return stdout"""
+    proc = subprocess.run(
+        shlex.split(cmd),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"Command failed ({proc.returncode}): {cmd}\n{proc.stdout}")
+    return proc.stdout
+
+
+def format_srt_time(seconds: float) -> str:
+    """Format seconds as SRT timestamp."""
+    if seconds < 0:
+        seconds = 0
+    td = timedelta(seconds=float(seconds))
+    total_seconds = int(td.total_seconds())
+    ms = int((td.total_seconds() - total_seconds) * 1000)
+    hh = total_seconds // 3600
+    mm = (total_seconds % 3600) // 60
+    ss = total_seconds % 60
+    return f"{hh:02}:{mm:02}:{ss:02},{ms:03}"
+
+
+def extract_audio(audio_path: Path, wav_path: Path) -> None:
+    """Extract audio to WAV format for faster-whisper."""
+    wav_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd = f'ffmpeg -y -i "{audio_path}" -ac 1 -ar 16000 -c:a pcm_s16le "{wav_path}"'
+    run_command(cmd)
+
+
+def parse_lyrics(lyrics_input: str) -> list[str]:
+    """Parse lyrics from file or raw text."""
+    lyrics_path = Path(lyrics_input)
+    
+    if lyrics_path.exists():
+        content = lyrics_path.read_text(encoding='utf-8')
+    else:
+        content = lyrics_input
+    
+    # Remove timestamps if present in LRC format
+    import re
+    content = re.sub(r'\[\d{2}:\d{2}(\.\d{2})?\]', '', content)
+    
+    # Remove SRT timestamps if present
+    content = re.sub(r'\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}:\d{2}:\d{2},\d{2},\d{2},\d{2},\d{2},\d{2}:\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\d{2},\{2},\d{2},\d{2},\{2},\d{2},\d{2},\d{2},\d{2},\d{2},\{2},\d{2},\d{2},\d{2},d{2},d{2},d{2},\d{2},\d{2},\d{2},\d{2},d{2},d{2},\{2},d{d{2},d{2},\d{2},d{2},d{2},d{2},\d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},\d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},{d},{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{d},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},d},d{2},d{2},d},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d2},d{2},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},{{2},d{2},d{2},d{2},d{d2},d{d},d{2},d{2},d{2},d{2},d{2},d{2},{2},d{2},d{2},d{2},d{2},d{2},d{2},d{2},{2},d},d{2},d{2},d    # Remove bracketed section headers like [Movement 1], [Section], etc. and blank lines around them
+    # Skip entire lines that are section headers [text]
+    # Skip lines that are section headers
+    # Skip blank/whitespace lines
+    # Keep actual lyric lines
+    lines = [line.strip() for line in content.strip().split('\n') if line.strip()]
+    
+    return lines
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create command-line argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Transcribe audio to get word-level timestamps",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Transcribe audio file
+  sync-lyrics --audio song.mp3 --lyrics lyrics.txt
+  
+  # Output to file
+  sync-lyrics --audio song.wav --lyrics lyrics.txt --output lyrics.srt --format srt
+"""
+    )
+    
+    parser.add_argument("--audio", required=True,
+                        help="Path to audio file (MP3, WAV, FLAC, etc.)")
+    parser.add_argument("--lyrics", required=True,
+                        help="Path to lyrics file (TXT, SRT, LRC) or raw lyrics text")
+    parser.add_argument("--output", "-o",
+                        help="Output file path (default: auto-generated based on format)")
+    parser.add_argument("--format", "-f",
+                        choices=["json", "srt", "lrc", "txt"],
+                        default="json",
+                        help="Output format (default: json)")
+    parser.add_argument("--log-level", default="INFO",
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                        help="Set the logging level")
+    
+    return parser
+
+
+def main():
+    """Main CLI entry point."""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    logging.basicConfig(level=getattr(logging, args.log_level))
+    logger = logging.getLogger(__name__)
+    
+    try:
+        audio_path = Path(args.audio)
+        lyrics_input = args.lyrics
+        output_format = args.format
+        
+        if not audio_path.exists():
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
+        
+        # Extract audio to WAV
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp_dir:
+            wav_path = Path(temp_dir) / "audio_16k_mono.wav"
+            
+            logger.info(f"Extracting audio to 16kHz mono: {wav_path.name}")
+            extract_audio(audio_path, wav_path)
+            
+            # Parse lyrics
+            logger.info(f"Parsing lyrics...")
+            lyrics_lines = parse_lyrics(lyrics_input)
+            logger.info(f"Parsed {len(lyrics_lines)} lyric lines")
+            
+            # Transcribe audio using faster-whisper
+            logger.info("Transcribing audio...")
+            from faster_whisper import WhisperModel
+            
+            # Load model
+            device = "cpu"
+            model = WhisperModel("small", device=device, compute_type="int8")
+            
+            logger.info(f"Loading model...")
+            model = model  # This just to avoid download
+            
+            # Get word-level timestamps
+            logger.info("Getting word-level timestamps...")
+            segments, info = model.transcribe(
+                str(wav_path),
+                word_timestamps=True,
+                vad_filter=True,
+                language="en"
+            )
+            
+            logger.info(f"Found {len(segments)} segments with word-level timestamps")
+            
+            # Write SRT
+            output_path = audio_path.parent / f"{audio_path.stem}_synced.{output_format}"
+            
+            if output_format == "srt":
+                srt_lines = []
+                for i, segment in enumerate(segments, start=1):
+                    start_time = segment.start
+                    end_time = segment.end
+                    text = segment.text.strip()
+                    
+                    if text:
+                        srt_lines.append(str(i))
+                        srt_lines.append(f"{format_srt_time(start_time)} --> {format_srt_time(end_time)}")
+                        srt_lines.append(text)
+                        srt_lines.append("")
+                
+                output_path.write_text("\n".join(srt_lines), encoding="utf-8")
+            else:
+                logger.error(f"Unsupported format: {output_format}")
+                return 1
+        
+        print(f"✅ Word-level timestamps saved to: {output_path}")
+        return 0
+        
+    except FileNotFoundError as e:
+        logging.error(f"File not found: {e}")
+        print(f"❌ File not found: {e}")
+        return 1
+    except ImportError as e:
+        logging.error(f"Missing dependency: {e}")
+        print(f"❌ Missing dependency: {e}")
+        print("Install faster-whisper: pip install faster-whisper")
+        return 1
+    except Exception as e:
+        logging.error(f"Error processing audio: {e}", exc_info=True)
+        print(f"❌ Error processing audio: {e}")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,550 @@
+TECHNICAL SPECIFICATION
+
+Organizing and Cleaning Minigame
+Standalone Webpage
+Vanilla HTML CSS JavaScript Only
+
+1. Objective
+
+Build a standalone browser minigame where the player organizes a messy room by placing items into correct zones. The player earns Reality Tokens on completion. No external libraries.
+
+2. Technical Constraints
+
+Must run locally by opening index.html in a modern browser
+
+No frameworks, no libraries, no build tooling
+
+Vanilla HTML CSS JavaScript only
+
+No backend
+
+No network calls
+
+No canvas required, DOM based rendering only
+
+3. Deliverables
+
+Either single file or three file implementation.
+
+Option A Single File
+
+index.html contains HTML, CSS, JS in one file
+
+Option B Split Files
+
+index.html
+
+style.css
+
+game.js
+
+No additional files required.
+
+4. Gameplay Requirements
+4.1 Core Loop
+
+Room starts with items scattered
+
+Player places items into correct zones
+
+Progress bar increases as items are correctly placed
+
+When all items are placed correctly, game completes and awards Reality Tokens
+
+Player may restart
+
+4.2 Completion Definition
+
+Game is complete when:
+
+All items have isPlaced === true
+
+Completion screen appears
+
+Reality Tokens earned is shown
+
+Restart works and resets the game state
+
+5. Game State Model
+
+Game must implement a state machine:
+
+gameState = "start" | "playing" | "complete"
+
+Start
+
+Displays start overlay
+
+No interactions required except Start action
+
+Playing
+
+Player can interact with items and zones
+
+Progress updates live
+
+Complete
+
+Interactions disabled
+
+Completion overlay visible
+
+Tokens awarded
+
+6. Interaction Model
+
+Implement Model B only.
+
+Model B Click Pick and Place
+
+Click an item to pick it up
+
+Picked item becomes the active held item
+
+Click a target zone to place the held item
+
+If zone is correct, item snaps into zone and becomes placed
+
+If zone is incorrect, item returns to its original position and remains unplaced
+
+This model avoids HTML5 drag and drop complexity and is the required MVP.
+
+7. Visual Layout Requirements
+7.1 Game Container
+
+Fixed size game container centered on page
+
+Required dimensions:
+
+Width: 800px
+
+Height: 500px
+
+Behaviors:
+
+position: relative
+
+overflow: hidden
+
+7.2 Room Surface
+
+Represents the room area inside the game container
+
+Static background color or simple CSS pattern
+
+Items and zones render inside the room surface
+
+8. Entity Definitions
+8.1 Items
+
+Items represent mess objects that must be sorted.
+
+Item Types
+
+At minimum include 4 item types:
+
+laundry
+
+trash
+
+dishes
+
+books
+
+Item Count
+
+Minimum count: 12 items
+Suggested: 3 per type
+
+Item Properties
+
+Each item must have:
+
+id unique string
+
+type string from allowed set
+
+correctZoneId string
+
+x number initial left position in pixels
+
+y number initial top position in pixels
+
+isPlaced boolean default false
+
+originX number for reset
+
+originY number for reset
+
+Item DOM Representation
+
+Each item is a DOM element:
+
+Tag: div
+
+Class: item
+
+Data attributes:
+
+data-item-id
+
+data-item-type
+
+data-correct-zone
+
+8.2 Zones
+
+Zones represent organization containers.
+
+Zone Types
+
+Minimum zones:
+
+basket for laundry
+
+bin for trash
+
+sink for dishes
+
+shelf for books
+
+Zone Properties
+
+Each zone must have:
+
+id unique string
+
+acceptsType string
+
+x number left position in pixels
+
+y number top position in pixels
+
+width number
+
+height number
+
+Zone DOM Representation
+
+Each zone is a DOM element:
+
+Tag: div
+
+Class: zone
+
+Attributes:
+
+id set to zone id
+
+data-accepts-type
+
+9. UI Requirements
+
+UI panel must display:
+
+Cleanliness percent
+
+Items placed out of total
+
+Reality Tokens earned total
+
+Status message for held item
+
+Minimum UI elements:
+
+Progress bar container
+
+Progress bar fill
+
+Text fields
+
+Example IDs:
+
+cleanlinessText
+
+progressFill
+
+placedText
+
+tokensText
+
+heldText
+
+10. Cleanliness System
+10.1 Variables
+
+totalItems integer
+
+placedItems integer
+
+cleanlinessPercent integer 0 to 100
+
+10.2 Computation
+
+Cleanliness must update as:
+
+cleanlinessPercent = floor((placedItems / totalItems) * 100)
+
+
+Update after every successful placement.
+
+11. Reality Token System
+11.1 Currency Variable
+
+Implement currency variable:
+
+let realityTokens = 0;
+
+11.2 Award Rule
+
+Award tokens only on completion:
+
+Minimum formula:
+
+tokensEarned = totalItems
+realityTokens += tokensEarned
+
+11.3 Integration Hook
+
+Must expose a function for later reuse:
+
+function awardRealityTokens(amount) {
+  realityTokens += amount;
+  updateUI();
+}
+
+
+This function must be used internally for awarding tokens.
+
+No persistence storage required in this minigame.
+
+12. Placement Validation
+12.1 Held Item Model
+
+Implement:
+
+heldItemId string or null
+
+When player clicks an item, set held item if item is not already placed
+
+12.2 Placement Attempt
+
+When player clicks a zone while holding an item:
+
+Validate:
+
+Item correct zone id equals clicked zone id
+OR
+
+Item type equals zone accepts type
+
+Choose one validation method, must be consistent.
+
+Required method:
+
+item.type === zone.acceptsType
+
+12.3 Correct Placement
+
+If correct:
+
+Snap item into zone
+
+Set isPlaced = true
+
+Disable further clicks on that item
+
+Increment placed count
+
+Update cleanliness
+
+Update UI
+
+Clear held item
+
+12.4 Incorrect Placement
+
+If incorrect:
+
+Reset item position to origin
+
+Show brief reject feedback
+
+Clear held item
+
+13. Snapping Behavior
+
+On correct placement, item must move into zone area.
+
+Minimum snap rule:
+
+Place item centered within zone bounds
+
+Apply CSS transition for smooth movement
+
+14. Feedback Requirements
+
+Minimum feedback behaviors:
+
+14.1 Held Item Feedback
+
+When item is held:
+
+Add class held to item
+
+UI text shows held item type
+
+14.2 Zone Highlight
+
+When holding an item and hovering zones:
+
+Zones get class activeZone
+
+Correct zone gets class correctZone only on hover check is optional
+
+Minimum required:
+
+Highlight all zones when holding item
+
+14.3 Incorrect Placement Feedback
+
+Brief shake animation on item or zone
+
+Or brief red outline flash on zone
+
+15. Entity Rendering Rules
+15.1 Positioning
+
+All items and zones use:
+
+position: absolute
+
+Left and top pixel values from data
+
+15.2 Z Index
+
+Ensure items render above zones.
+
+Zones z index 1
+
+Items z index 2
+
+UI overlay z index 10
+
+16. Restart Requirements
+
+Restart must:
+
+Reset gameState to start or playing based on design
+
+Clear held item
+
+Reset placedItems and cleanliness
+
+Reset item positions to origin
+
+Reset item placed state
+
+Hide completion overlay
+
+Update UI
+
+Tokens may be reset or persist.
+
+Required behavior:
+
+Tokens reset on restart in this standalone version
+
+Implement:
+
+realityTokens = 0;
+
+17. Data Initialization
+
+Game must define configuration arrays:
+
+const zonesConfig = [...]
+const itemsConfig = [...]
+
+
+On initialization:
+
+Create zone DOM nodes from config
+
+Create item DOM nodes from config
+
+Attach listeners
+
+Randomization is optional but not required.
+
+18. Performance Requirements
+
+No more than 30 item nodes
+
+Must remove event listeners properly on restart or reuse same nodes
+
+No creation of infinite nodes
+
+19. Accessibility Requirements
+
+Minimum:
+
+Start button is clickable
+
+Keyboard controls not required
+
+Text is readable against background
+
+20. Completion Overlay Requirements
+
+When complete:
+
+Show overlay with:
+
+Completion message
+
+Tokens earned value
+
+Restart button
+
+Overlay blocks clicks to room.
+
+21. Non Scope
+
+Must not implement:
+
+Multi room progression
+
+Timers or time bonuses
+
+Persistent save storage
+
+Inventory systems
+
+Sound
+
+Mobile gestures
+
+Drag and drop API
+
+Animations beyond basic transitions
+
+22. Acceptance Tests
+
+Implementation passes when:
+
+Start screen shows, Start begins game
+
+Clicking an unplaced item marks it as held
+
+Clicking correct zone places item and increases cleanliness
+
+Clicking incorrect zone resets item
+
+UI updates after each placement
+
+When all items placed, completion overlay shows
+
+Tokens earned equals total items
+
+Restart resets game and allows replay

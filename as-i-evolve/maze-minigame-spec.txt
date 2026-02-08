@@ -1,0 +1,493 @@
+TECHNICAL SPECIFICATION
+
+Maze Navigation Minigame
+Multi Screen Exploration with Mapping and Item Transport
+Standalone Webpage
+Vanilla HTML CSS JavaScript Only
+
+1. Objective
+
+Build a standalone browser based maze exploration minigame where:
+
+A procedural maze is generated
+
+Maze spans multiple screens
+
+Player navigates between screens
+
+Map reveals as player explores
+
+Player collects items
+
+Items must be delivered to specific destinations
+
+Reality Tokens are collected and awarded
+
+No external libraries.
+
+2. Technical Constraints
+
+Vanilla HTML CSS JavaScript only
+
+No frameworks
+
+No canvas required but allowed
+
+No backend
+
+No build tools
+
+Must run locally via index.html
+
+Preferred rendering model: DOM grid based.
+
+3. File Structure
+
+Allowed implementations:
+
+Option A single file:
+
+index.html
+
+
+Option B split:
+
+index.html
+style.css
+game.js
+mazeGenerator.js
+
+4. Core Gameplay Loop
+
+Maze generates
+
+Player starts in one room
+
+Player navigates corridors and doors
+
+Screens transition as player moves
+
+Map reveals explored rooms
+
+Player collects items
+
+Player delivers items to correct nodes
+
+Player collects Reality Tokens
+
+Completion when all objectives done or exit reached
+
+5. Maze Architecture Model
+5.1 Maze Grid Structure
+
+Maze must be composed of rooms arranged in a grid.
+
+Minimum grid size:
+
+5 x 5 rooms
+
+
+Expandable later.
+
+Each room is a “screen”.
+
+5.2 Room Definition
+
+Each room contains:
+
+Walls
+
+Doors to adjacent rooms
+
+Floor space
+
+Optional item spawn
+
+Optional token spawn
+
+Optional delivery node
+
+Room object schema:
+
+{
+  id: "2_3",
+  x: 2,
+  y: 3,
+  doors: {
+    north: true,
+    south: false,
+    east: true,
+    west: true
+  },
+  visited: false,
+  items: [],
+  tokens: [],
+  deliveryNodes: []
+}
+
+6. Maze Generation Protocol
+
+Must use procedural algorithm.
+
+Required algorithm:
+
+Recursive Backtracking Maze Generation.
+
+Steps:
+
+Create full grid
+
+Mark all cells unvisited
+
+Choose start cell
+
+Randomly carve passages to unvisited neighbors
+
+Continue until all cells visited
+
+Output:
+
+Connected maze
+
+No isolated rooms
+
+At least one path between any two rooms
+
+Maze generation runs once on game start.
+
+7. Screen Navigation System
+7.1 Transition Rules
+
+Player exits screen via door edges.
+
+When crossing boundary:
+
+Load adjacent room
+
+Update current room reference
+
+Mark room visited
+
+Update map
+
+7.2 Movement Constraints
+
+Player cannot cross where door is false.
+
+Walls block movement.
+
+8. Player Entity Specification
+Properties
+
+Width 30px
+
+Height 30px
+
+Movement speed fixed
+
+Carries one item at a time
+
+Controls
+
+Arrow keys or WASD
+
+Four direction movement
+
+Boundaries
+
+Cannot move through walls
+
+Can pass through doors only
+
+9. Room Rendering Model
+
+Each room renders:
+
+Floor container
+
+Wall divs
+
+Door gaps
+
+Items
+
+Tokens
+
+Delivery nodes
+
+Room size:
+
+600px x 600px
+
+10. Mapping System
+10.1 Map Objective
+
+Reveal maze structure as player explores.
+
+Fog of war model.
+
+10.2 Map Display
+
+Small overlay minimap.
+
+Grid representation.
+
+Each cell shows:
+
+Unvisited room: hidden
+
+Visited room: visible
+
+Current room: highlighted
+
+11. Item System
+11.1 Item Types
+
+Minimum 3 transport items:
+
+Memory Fragment
+
+Energy Core
+
+Signal Artifact
+
+Items spawn in specific rooms.
+
+11.2 Item Properties
+{
+  id,
+  type,
+  originRoomId,
+  destinationRoomId,
+  isCollected,
+  isDelivered
+}
+
+12. Inventory System
+
+Player can carry:
+
+1 item maximum
+
+
+When collected:
+
+Item attaches visually to player
+
+UI shows held item
+
+Cannot collect second item while holding one.
+
+13. Delivery Node System
+
+Certain rooms contain delivery nodes.
+
+Each node accepts specific item type.
+
+Node schema:
+
+{
+  id,
+  acceptsType,
+  roomId,
+  isCompleted
+}
+
+14. Delivery Validation
+
+When player overlaps node while holding item:
+
+Check:
+
+heldItem.type === node.acceptsType
+
+
+If true:
+
+Deliver item
+
+Mark node complete
+
+Award bonus tokens
+
+Clear held item
+
+If false:
+
+Reject delivery
+
+15. Reality Token System
+
+Tokens spawn in rooms randomly or predefined.
+
+Token Properties
+{
+  id,
+  roomId,
+  collected
+}
+
+Collection Behavior
+
+On player overlap:
+
+Increment token currency
+
+Remove token from room
+
+16. Currency Variables
+
+Global variable required:
+
+let realityTokens = 0;
+
+
+Award sources:
+
+Token pickups
+
+Delivery bonuses
+
+Completion bonus
+
+17. Screen Persistence
+
+Maze must maintain world state.
+
+When leaving a room:
+
+Item placements persist
+
+Collected tokens remain removed
+
+Delivered nodes remain complete
+
+State stored in maze grid object.
+
+18. Camera / View Model
+
+No scrolling camera required.
+
+Each room is a full screen swap.
+
+Transition method:
+
+Replace DOM content
+
+Or hide and show room containers
+
+19. Collision Systems
+
+Must detect:
+
+Player vs walls
+
+Player vs doors
+
+Player vs items
+
+Player vs tokens
+
+Player vs delivery nodes
+
+Bounding box detection sufficient.
+
+20. Completion Conditions
+
+Game completes when either:
+
+Option A:
+
+All delivery nodes completed
+
+Option B:
+
+Exit room reached after deliveries
+
+MVP required condition:
+
+All delivery nodes completed
+
+21. UI Requirements
+
+Must display:
+
+Tokens collected
+
+Held item type
+
+Deliveries completed
+
+Map overlay
+
+Optional:
+
+Room coordinates
+
+22. Restart Requirements
+
+Restart must:
+
+Regenerate maze
+
+Reset player position
+
+Reset tokens
+
+Reset deliveries
+
+Reset visited map
+
+23. Performance Constraints
+
+Max grid size 10 x 10
+
+DOM room rebuild allowed
+
+No memory leaks
+
+Maze generation must complete under 100ms
+
+24. Non Scope
+
+Do NOT implement:
+
+Enemies
+
+Timers
+
+Combat
+
+Lighting systems
+
+Pathfinding AI
+
+Multiplayer
+
+Sound
+
+Save storage
+
+Procedural art assets
+
+25. Acceptance Criteria
+
+Game is complete when:
+
+Maze generates procedurally
+
+Player moves room to room
+
+Map reveals visited rooms
+
+Items can be collected
+
+Only one item carried
+
+Items can be delivered correctly
+
+Tokens can be collected
+
+World state persists between rooms
+
+Completion triggers after deliveries
